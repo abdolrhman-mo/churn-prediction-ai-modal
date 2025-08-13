@@ -116,32 +116,24 @@ df.shape
 ## ⚙️ **Phase 5: Data Preprocessing**
 
 ### What this means:
-- Transform your data into a format that machine learning algorithms can understand
-- Computers can't understand "Male/Female" directly - need to convert to numbers
-
-### What you'll do:
-```python
-# Convert text to numbers (encoding)
-df['gender'] = df['gender'].map({'Male': 1, 'Female': 0})
-df = pd.get_dummies(df, columns=['Contract', 'PaymentMethod'])
-
-# Split data
-X = df.drop('Churn', axis=1)  # Features (everything except target)
-y = df['Churn']               # Target (what we want to predict)
-```
+- Clean up your data so the computer can understand it
+- Remove stuff that doesn't help predict churn
 
 ### Main tasks:
-- **Encode categorical variables**: 
-  - "Male/Female" → 1/0
+- **Remove useless columns**: 
+  - `customerID` - just a random number, doesn't tell us anything about churn
+  - Other columns that don't help predict if someone will leave
+- **Convert text to numbers**:
+  - "Male/Female" → 1/0 (computer only understands numbers)
   - "Month-to-month/One year/Two year" → separate columns with 1/0
-- **Split features and target**: 
+- **Prepare data for training**: 
   - X = customer info (age, gender, services, etc.)
   - y = whether they churned (Yes/No)
-- **Train/test split**: Keep some data hidden to test your model later
+  - Split data: 80% to train, 20% to test
 
 ### Why this matters:
-- Algorithms only work with numbers, not text
-- Need separate data to test if your model works on new customers
+- Computer needs clean, simple data to learn from
+- Useless columns confuse the computer and make predictions worse
 
 ---
 
@@ -150,19 +142,6 @@ y = df['Churn']               # Target (what we want to predict)
 ### What this means:
 - Teach a computer algorithm to recognize patterns between customer info and churn
 - Like showing the algorithm: "Customers with month-to-month contracts churn more"
-
-### What you'll do:
-```python
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-# Train model
-model = RandomForestClassifier()
-model.fit(X_train, y_train)  # Learn from training data
-```
 
 ### What happens:
 - **Algorithm learns patterns**: High monthly charges + month-to-month contract = likely to churn
@@ -184,15 +163,6 @@ model.fit(X_train, y_train)  # Learn from training data
 ### What this means:
 - Test how well your model can predict churn on customers it has never seen before
 - Like giving a student a test on material they studied
-
-### What you'll do:
-```python
-predictions = model.predict(X_test)
-from sklearn.metrics import accuracy_score, classification_report
-
-accuracy = accuracy_score(y_test, predictions)
-print(f"Accuracy: {accuracy:.2f}")  # e.g., "Accuracy: 0.85" means 85% correct
-```
 
 ### Key metrics:
 - **Accuracy**: Overall correctness (85% = correct on 85 out of 100 customers)
@@ -219,16 +189,6 @@ Churn             75    |  125     (125 correctly predicted to leave)
 ### What this means:
 - Fine-tune your model to get better predictions
 - Like adjusting settings to get better performance
-
-### What you might do:
-```python
-# Try different settings
-model = RandomForestClassifier(n_estimators=200, max_depth=10)
-
-# Try different algorithms
-from sklearn.svm import SVC
-svm_model = SVC()
-```
 
 ### Common optimization techniques:
 - **Hyperparameter tuning**: Adjust algorithm settings for better performance
