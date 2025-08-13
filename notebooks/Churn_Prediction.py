@@ -269,8 +269,25 @@ print(categorical_cols)
 # In[ ]:
 
 
-binary_cols =['Dependents','Contract','PaperlessBilling']
-onehot_cols =['InternetService','OnlineSecurity','DeviceProtection','TechSupport','PaymentMethod']
+# Dynamic column classification based on data types and unique values
+# Binary columns: columns with only 2 unique values (Yes/No)
+binary_cols = []
+for col in categorical_cols:
+    if col != 'Churn':  # Exclude target variable
+        unique_vals = df[col].nunique()
+        if unique_vals == 2:
+            binary_cols.append(col)
+
+# One-hot columns: columns with more than 2 unique values
+onehot_cols = []
+for col in categorical_cols:
+    if col != 'Churn':  # Exclude target variable
+        unique_vals = df[col].nunique()
+        if unique_vals > 2:
+            onehot_cols.append(col)
+
+print("Binary columns (2 unique values):", binary_cols)
+print("One-hot columns (>2 unique values):", onehot_cols)
 
 # Numerical pipeline
 num_pipeline = Pipeline([

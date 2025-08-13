@@ -130,6 +130,8 @@ df.shape
   - X = customer info (age, gender, services, etc.)
   - y = whether they churned (Yes/No)
   - Split data: 80% to train, 20% to test
+- **Handle imbalanced data**: If 80% stayed and 20% left, balance the data so the model learns from both groups equally
+- **Scale numerical features**: Make all numbers (like monthly charges, tenure) the same size so the model doesn't work poorly and favor big numbers over small ones
 
 ### Why this matters:
 - Computer needs clean, simple data to learn from
@@ -169,14 +171,6 @@ df.shape
 - **Precision**: When model says "will churn", how often is it right?
 - **Recall**: Of customers who actually churned, how many did we catch?
 - **F1-Score**: Balance between precision and recall
-
-### Confusion Matrix example:
-```
-Predicted:    No Churn  |  Churn
-Actual:
-No Churn         850    |   50     (850 correctly predicted to stay)
-Churn             75    |  125     (125 correctly predicted to leave)
-```
 
 ### Why this matters:
 - Tells you if your model is good enough to use in real business
