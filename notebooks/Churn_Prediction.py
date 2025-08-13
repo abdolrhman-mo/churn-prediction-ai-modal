@@ -126,34 +126,6 @@ sns.countplot(x='Contract', hue='Churn', data=df)
 plt.title("Churn by Contract Type")
 
 
-# In[26]:
-
-
-# # Function to evaluate model performance
-# def evaluate_model(model, X_test, y_test, model_name):
-#     """Evaluate model and print comprehensive metrics"""
-#     y_pred = model.predict(X_test)
-#     y_pred_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, 'predict_proba') else None
-
-#     print(f"\n=== {model_name} Performance ===")
-#     print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-#     print(f"Precision: {precision_score(y_test, y_pred):.4f}")
-#     print(f"Recall: {recall_score(y_test, y_pred):.4f}")
-#     print(f"F1-Score: {f1_score(y_test, y_pred):.4f}")
-
-#     if y_pred_proba is not None:
-#         print(f"ROC-AUC Score: {roc_auc_score(y_test, y_pred_proba):.4f}")
-
-#     print("\nConfusion Matrix:")
-#     print(confusion_matrix(y_test, y_pred))
-#     print("\nClassification Report:")
-#     print(classification_report(y_test, y_pred))
-
-#     return y_pred
-
-
-
-
 # In[27]:
 
 
@@ -257,7 +229,7 @@ Based on our analysis, both models show strong performance in predicting custome
 
 # ## **Phase 5: Data Preprocessing**
 
-# In[28]:
+# In[ ]:
 
 
 # Drop customerID (not useful)
@@ -463,46 +435,167 @@ y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back
 y_pred_rf = rf_model.predict(X_test_cleaned)
 
 
-# In[52]:
+# In[ ]:
 
 
-# Logistic Regression
-print("Logistic Regression:")
-print("Accuracy:", accuracy_score(y_test, y_pred_lr))
-print("Precision:", precision_score(y_test, y_pred_lr, pos_label='Yes'))  # 'Yes' = churn
-print("Recall:", recall_score(y_test, y_pred_lr, pos_label='Yes'))       # 'Yes' = churn
-print("F1 Score:", f1_score(y_test, y_pred_lr, pos_label='Yes'))        # 'Yes' = churn
-print("ROC AUC:", roc_auc_score(y_test, lr_model.predict_proba(X_test_scaled)[:,1]))
-print(classification_report(y_test, y_pred_lr))
+# Evaluation function for cleaner code
+def evaluate_model(model, y_true, y_pred, model_name, X_test_data, use_encoded=False):
+    """Evaluate a single model and return metrics"""
 
-# SVM
-print("\nSVM:")
-print("Accuracy:", accuracy_score(y_test, y_pred_svm))
-print("Precision:", precision_score(y_test, y_pred_svm, pos_label='Yes'))  # 'Yes' = churn
-print("Recall:", recall_score(y_test, y_pred_svm, pos_label='Yes'))       # 'Yes' = churn
-print("F1 Score:", f1_score(y_test, y_pred_svm, pos_label='Yes'))        # 'Yes' = churn
-print("ROC AUC:", roc_auc_score(y_test, svm_model.predict_proba(X_test_scaled)[:,1]))
-print(classification_report(y_test, y_pred_svm))
+    # Basic metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, pos_label='Yes')
+    recall = recall_score(y_true, y_pred, pos_label='Yes')
+    f1 = f1_score(y_true, y_pred, pos_label='Yes')
+
+    # ROC AUC (handle different data formats)
+    if use_encoded:
+        # For XGBoost and Random Forest (using encoded test data)
+        y_true_encoded = label_encoder.transform(y_true)
+        roc_auc = roc_auc_score(y_true_encoded, model.predict_proba(X_test_data)[:,1])
+    else:
+        # For Logistic Regression and SVM (using scaled test data)
+        roc_auc = roc_auc_score(y_true, model.predict_proba(X_test_data)[:,1])
+
+    return {
+        'Model': model_name,
+        'Accuracy': accuracy,
+        'Precision': precision,
+        'Recall': recall,
+        'F1 Score': f1,
+        'ROC AUC': roc_auc
+    }
+
+# Evaluate all models
+print("\n" + "="*60)
+print("📊 MODEL EVALUATION RESULTS")
+print("="*60)
+
+# Evaluate each model
+lr_results = evaluate_model(lr_model, y_test, y_pred_lr, "Logistic Regression", X_test_scaled, use_encoded=False)
+svm_results = evaluate_model(svm_model, y_test, y_pred_svm, "SVM", X_test_scaled, use_encoded=False)
+xgb_results = evaluate_model(xgb_model, y_test, y_pred_xgb, "XGBoost", X_test_cleaned, use_encoded=True)
+rf_results = evaluate_model(rf_model, y_test, y_pred_rf, "Random Forest", X_test_cleaned, use_encoded=True)
+
+# Display detailed results for each model
+models_to_evaluate = [lr_results, svm_results, xgb_results, rf_results]
+
+for model_result in models_to_evaluate:
+    print(f"\n{model_result['Model'].upper()}")
+    print("-" * 40)
+    print(f"Accuracy:  {model_result['Accuracy']:.4f}")
+    print(f"Precision: {model_result['Precision']:.4f}")
+    print(f"Recall:    {model_result['Recall']:.4f}")
+    print(f"F1 Score:  {model_result['F1 Score']:.4f}")
+    print(f"ROC AUC:   {model_result['ROC AUC']:.4f}")
+
+    # Get predictions for classification report
+    if model_result['Model'] == "Logistic Regression":
+        y_pred_for_report = y_pred_lr
+    elif model_result['Model'] == "SVM":
+        y_pred_for_report = y_pred_svm
+    elif model_result['Model'] == "XGBoost":
+        y_pred_for_report = y_pred_xgb
+    else:  # Random Forest
+        y_pred_for_report = y_pred_rf
+
+    print(f"\nClassification Report:")
+    print(classification_report(y_test, y_pred_for_report))
 
 
-# In[58]:
+# In[63]:
 
 
-# XGBoost
-print("\nXGBoost:")
-print("Accuracy:", accuracy_score(y_test, y_pred_xgb))
-print("Precision:", precision_score(y_test, y_pred_xgb, pos_label='Yes'))
-print("Recall:", recall_score(y_test, y_pred_xgb, pos_label='Yes'))
-print("F1 Score:", f1_score(y_test, y_pred_xgb, pos_label='Yes'))
-print("ROC AUC:", roc_auc_score(y_test_encoded, xgb_model.predict_proba(X_test_cleaned)[:,1]))
-print(classification_report(y_test, y_pred_xgb))
+# Model comparison summary
+print("\n" + "="*60)
+print("🏆 MODEL COMPARISON SUMMARY")
+print("="*60)
 
-# Random Forest
-print("\nRandom Forest:")
-print("Accuracy:", accuracy_score(y_test, y_pred_rf))
-print("Precision:", precision_score(y_test, y_pred_rf, pos_label='Yes'))
-print("Recall:", recall_score(y_test, y_pred_rf, pos_label='Yes'))
-print("F1 Score:", f1_score(y_test, y_pred_rf, pos_label='Yes'))
-print("ROC AUC:", roc_auc_score(y_test_encoded, rf_model.predict_proba(X_test_cleaned)[:,1]))
-print(classification_report(y_test, y_pred_rf))
+# Create comparison DataFrame
+comparison_data = []
+for model_result in models_to_evaluate:
+    comparison_data.append([
+        model_result['Model'],
+        model_result['Accuracy'],
+        model_result['Precision'],
+        model_result['Recall'],
+        model_result['F1 Score'],
+        model_result['ROC AUC']
+    ])
+
+comparison_df = pd.DataFrame(comparison_data, 
+                           columns=['Model', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC'])
+print(comparison_df.round(4))
+
+
+# In[65]:
+
+
+# Find best performing model
+best_model_idx = comparison_df['F1 Score'].idxmax()
+best_model_name = comparison_df.loc[best_model_idx, 'Model']
+best_f1_score = comparison_df.loc[best_model_idx, 'F1 Score']
+
+print(f"\n🥇 BEST PERFORMING MODEL:")
+print(f"   {best_model_name} with F1 Score: {best_f1_score:.4f}")
+
+# Sample prediction demonstration
+print("\n" + "="*60)
+print("🔮 SAMPLE PREDICTION DEMONSTRATION")
+print("="*60)
+
+# Use first test customer for demonstration
+sample_idx = 0
+sample_original = X_test.iloc[sample_idx]
+sample_actual = y_test.iloc[sample_idx]
+
+print(f"Customer Sample (first test customer):")
+print(f"  - Contract: {sample_original.get('Contract', 'N/A')}")
+print(f"  - Monthly Charges: ${sample_original.get('MonthlyCharges', 'N/A'):.2f}")
+print(f"  - Tenure: {sample_original.get('tenure', 'N/A')} months")
+print(f"  - Internet Service: {sample_original.get('InternetService', 'N/A')}")
+
+# Get predictions from all models
+sample_predictions = {
+    'Logistic Regression': y_pred_lr[sample_idx],
+    'SVM': y_pred_svm[sample_idx],
+    'XGBoost': y_pred_xgb[sample_idx],
+    'Random Forest': y_pred_rf[sample_idx]
+}
+
+print(f"\nPredictions:")
+print(f"  - Actual: {sample_actual}")
+for model_name, prediction in sample_predictions.items():
+    print(f"  - {model_name}: {prediction}")
+
+# Show prediction probabilities for best model
+print(f"\n🎯 Best Model ({best_model_name}) Prediction Probabilities:")
+if best_model_name == "Logistic Regression":
+    proba = lr_model.predict_proba(X_test_scaled[sample_idx:sample_idx+1])[0]
+elif best_model_name == "SVM":
+    proba = svm_model.predict_proba(X_test_scaled[sample_idx:sample_idx+1])[0]
+elif best_model_name == "XGBoost":
+    proba = xgb_model.predict_proba(X_test_cleaned[sample_idx:sample_idx+1])[0]
+else:  # Random Forest
+    proba = rf_model.predict_proba(X_test_cleaned[sample_idx:sample_idx+1])[0]
+
+print(f"  - Stay (No): {proba[0]:.3f}")
+print(f"  - Churn (Yes): {proba[1]:.3f}")
+
+# Step 8: Business insights summary
+print("\n" + "="*60)
+print("💡 BUSINESS INSIGHTS SUMMARY")
+print("="*60)
+
+print("Key Findings:")
+print(f"1. Best performing model: {best_model_name}")
+print(f"2. Overall accuracy range: {comparison_df['Accuracy'].min():.1%} - {comparison_df['Accuracy'].max():.1%}")
+print(f"3. Best F1 Score: {best_f1_score:.4f} ({best_model_name})")
+print(f"4. All models show {'good' if best_f1_score > 0.7 else 'moderate'} performance")
+
+print("\nRecommendations:")
+print("1. Deploy the best performing model for production use")
+print("2. Monitor model performance over time")
+print("3. Use predictions to identify high-risk customers")
+print("4. Implement targeted retention strategies")
 
