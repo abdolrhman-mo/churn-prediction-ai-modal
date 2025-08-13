@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[175]:
+# In[208]:
 
 
 import pandas as pd
@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report, confusion_matrix
 
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, LabelEncoder
@@ -28,7 +28,7 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-# In[176]:
+# In[209]:
 
 
 # Load dataset
@@ -38,14 +38,14 @@ df = pd.read_csv("../data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 df.head()
 
 
-# In[177]:
+# In[210]:
 
 
 # See how many rows and columns
 df.shape
 
 
-# In[178]:
+# In[211]:
 
 
 # See column names and types
@@ -59,21 +59,21 @@ df.info()
 
 # ## **Phase 2: Data Quality Assessment**
 
-# In[179]:
+# In[212]:
 
 
 #  Count missing values in each column
 df.isnull().sum()
 
 
-# In[180]:
+# In[213]:
 
 
 # Check for duplicate customers
 df.duplicated().sum()
 
 
-# In[181]:
+# In[214]:
 
 
 # See current data types
@@ -85,7 +85,7 @@ df.dtypes
 
 # ## **Phase 3: Data Cleaning**
 
-# In[182]:
+# In[215]:
 
 
 # Convert 'TotalCharges' to numeric, some rows may be blank
@@ -102,7 +102,7 @@ df = df.dropna()
 df.shape
 
 
-# In[183]:
+# In[216]:
 
 
 df.dtypes
@@ -110,7 +110,7 @@ df.dtypes
 
 # ## **Phase 4: Feature Engineering**
 
-# In[184]:
+# In[217]:
 
 
 # # CHUNK 1: Basic Data Exploration
@@ -133,7 +133,7 @@ df.dtypes
 # print(df.head(3))
 
 
-# In[185]:
+# In[218]:
 
 
 # # CHUNK 2: Find What Drives Churn
@@ -158,7 +158,7 @@ df.dtypes
 #             print(f"🚨 HIGH RISK categories in {col}: {high_risk[high_risk].index.tolist()}")
 
 
-# In[186]:
+# In[219]:
 
 
 # # CHUNK 3: See How Money Affects Churn
@@ -207,7 +207,7 @@ df.dtypes
 #             print(f"💡 FEATURE IDEA: Create 'low_{col.lower()}' flag for values < {churned_avg:.0f}")
 
 
-# In[187]:
+# In[220]:
 
 
 # # CHUNK 4: Create Your First Feature - Service Count
@@ -269,7 +269,7 @@ df.dtypes
 #     print("❌ Theory not confirmed - investigate further")
 
 
-# In[188]:
+# In[221]:
 
 
 # # CHUNK 5: Create Risk Profile Feature
@@ -326,7 +326,7 @@ df.dtypes
 #     print("⚠️ Weak feature - try different combinations.")
 
 
-# In[189]:
+# In[222]:
 
 
 # # CHUNK 6: Create Value Perception Features
@@ -400,7 +400,7 @@ df.dtypes
 #         print("❌ Hypothesis not confirmed")
 
 
-# In[190]:
+# In[223]:
 
 
 # # ## **Phase 4: Feature Engineering**
@@ -477,7 +477,7 @@ df.dtypes
 
 # ## **Phase 5: Data Visualization & Exploration**
 
-# In[191]:
+# In[224]:
 
 
 # Plot churn count
@@ -495,14 +495,14 @@ plt.title("Churn by Contract Type")
 
 # ## **Phase 6: Data Preprocessing**
 
-# In[192]:
+# In[225]:
 
 
 # Drop customerID (not useful)
 df.drop(['customerID'], axis=1, inplace=True)
 
 
-# In[193]:
+# In[226]:
 
 
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -512,7 +512,7 @@ print(num_cols)
 print(categorical_cols)
 
 
-# In[194]:
+# In[227]:
 
 
 # Dynamic column classification based on data types and unique values
@@ -537,7 +537,7 @@ print("Binary columns (2 unique values):", binary_cols)
 print("One-hot columns (>2 unique values):", onehot_cols)
 
 
-# In[195]:
+# In[228]:
 
 
 # Numerical pipeline
@@ -567,7 +567,7 @@ processing = ColumnTransformer([
 processing
 
 
-# In[196]:
+# In[229]:
 
 
 # Separate What You Want to Predict
@@ -593,7 +593,7 @@ y_train_encoded = label_encoder.fit_transform(y_train)
 y_test_encoded = label_encoder.transform(y_test)
 
 
-# In[197]:
+# In[230]:
 
 
 # Test if data is preprocessed
@@ -604,7 +604,7 @@ print("Processed shape:", X_train_cleaned.shape)
 # Example: Original (7000, 20) → Processed (7000, 45)
 
 
-# In[198]:
+# In[231]:
 
 
 # Another way to test if data is preprocessed
@@ -621,7 +621,7 @@ except ValueError as e:
     print(f"❌ Pipeline failed: {e}")
 
 
-# In[199]:
+# In[232]:
 
 
 # Check if your data is imbalanced
@@ -631,7 +631,7 @@ print("\nPercentages:")
 print(y_train.value_counts(normalize=True) * 100)
 
 
-# In[200]:
+# In[233]:
 
 
 # Resampling because the data is imbalanced
@@ -650,7 +650,7 @@ X_test_scaled = scaler.transform(X_test_cleaned)
 
 # ## **Phase 7: Model Training**
 
-# In[201]:
+# In[234]:
 
 
 # Train Logistic Regression model
@@ -686,23 +686,39 @@ rf_model = RandomForestClassifier(
 )
 rf_model.fit(X_train_cleaned, y_train)
 
+# Create voting classifier with your existing models
+print("Training Voting Classifier...")
+voting_model = VotingClassifier([
+    ('lr', lr_model),       # Logistic Regression
+    ('svm', svm_model),     # SVM
+    ('rf', rf_model)        # Random Forest
+    # Note: Excluding XGBoost because it uses different data format
+], voting='soft')  # 'soft' uses probabilities, 'hard' uses direct votes
+voting_model.fit(X_resampled_scaled, y_resampled)
+
 print("Model training completed!")
 
 
 # ## **Phase 8: Model Evaluation**
 
-# In[202]:
+# In[235]:
 
 
 # Make predictions
 y_pred_lr = lr_model.predict(X_test_scaled)
+
 y_pred_svm = svm_model.predict(X_test_scaled)
+
 y_pred_xgb_encoded = xgb_model.predict(X_test_cleaned)
 y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back to 'Yes'/'No'
+
 y_pred_rf = rf_model.predict(X_test_cleaned)
 
+# Make voting predictions
+y_pred_voting = voting_model.predict(X_test_scaled)
 
-# In[203]:
+
+# In[236]:
 
 
 # Evaluation function for cleaner code
@@ -743,9 +759,10 @@ lr_results = evaluate_model(lr_model, y_test, y_pred_lr, "Logistic Regression", 
 svm_results = evaluate_model(svm_model, y_test, y_pred_svm, "SVM", X_test_scaled, use_encoded=False)
 xgb_results = evaluate_model(xgb_model, y_test, y_pred_xgb, "XGBoost", X_test_cleaned, use_encoded=True)
 rf_results = evaluate_model(rf_model, y_test, y_pred_rf, "Random Forest", X_test_cleaned, use_encoded=True)
+voting_results = evaluate_model(voting_model, y_test, y_pred_voting, "Voting Classifier", X_test_scaled, use_encoded=False)
 
 # Display detailed results for each model
-models_to_evaluate = [lr_results, svm_results, xgb_results, rf_results]
+models_to_evaluate = [lr_results, svm_results, xgb_results, rf_results, voting_results]
 
 for model_result in models_to_evaluate:
     print(f"\n{model_result['Model'].upper()}")
@@ -770,7 +787,7 @@ for model_result in models_to_evaluate:
     print(classification_report(y_test, y_pred_for_report))
 
 
-# In[204]:
+# In[237]:
 
 
 # Model comparison summary
@@ -795,7 +812,7 @@ comparison_df = pd.DataFrame(comparison_data,
 print(comparison_df.round(4))
 
 
-# In[205]:
+# In[238]:
 
 
 # Find best performing model
@@ -827,7 +844,8 @@ sample_predictions = {
     'Logistic Regression': y_pred_lr[sample_idx],
     'SVM': y_pred_svm[sample_idx],
     'XGBoost': y_pred_xgb[sample_idx],
-    'Random Forest': y_pred_rf[sample_idx]
+    'Random Forest': y_pred_rf[sample_idx],
+    'Voting Classifier': y_pred_voting[sample_idx]
 }
 
 print(f"\nPredictions:")
@@ -843,6 +861,8 @@ elif best_model_name == "SVM":
     proba = svm_model.predict_proba(X_test_scaled[sample_idx:sample_idx+1])[0]
 elif best_model_name == "XGBoost":
     proba = xgb_model.predict_proba(X_test_cleaned[sample_idx:sample_idx+1])[0]
+elif best_model_name == "Voting Classifier":
+    proba = voting_model.predict_proba(X_test_scaled[sample_idx:sample_idx+1])[0]
 else:  # Random Forest
     proba = rf_model.predict_proba(X_test_cleaned[sample_idx:sample_idx+1])[0]
 
