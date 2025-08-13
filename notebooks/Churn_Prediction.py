@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[1]:
+# In[26]:
 
 
 import pandas as pd
@@ -26,7 +26,7 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-# In[21]:
+# In[27]:
 
 
 # Load dataset
@@ -64,14 +64,14 @@ df.info()
 df.isnull().sum()
 
 
-# In[8]:
+# In[28]:
 
 
 # Check for duplicate customers
 df.duplicated().sum()
 
 
-# In[9]:
+# In[29]:
 
 
 # See current data types
@@ -83,7 +83,7 @@ df.dtypes
 
 # ## **Phase 3: Data Cleaning**
 
-# In[ ]:
+# In[30]:
 
 
 # Convert 'TotalCharges' to numeric, some rows may be blank
@@ -98,6 +98,12 @@ df = df.dropna()
 
 # Check shapes
 df.shape
+
+
+# In[31]:
+
+
+df.dtypes
 
 
 # ## **Phase 4: Data Visualization & Exploration**
@@ -249,14 +255,14 @@ Based on our analysis, both models show strong performance in predicting custome
 
 # ## **Phase 5: Data Preprocessing**
 
-# In[11]:
+# In[32]:
 
 
 # Drop customerID (not useful)
 df.drop(['customerID'], axis=1, inplace=True)
 
 
-# In[ ]:
+# In[33]:
 
 
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -266,7 +272,7 @@ print(num_cols)
 print(categorical_cols)
 
 
-# In[ ]:
+# In[34]:
 
 
 # Dynamic column classification based on data types and unique values
@@ -289,9 +295,15 @@ for col in categorical_cols:
 print("Binary columns (2 unique values):", binary_cols)
 print("One-hot columns (>2 unique values):", onehot_cols)
 
+# TODO: why aren't we using label encoding?
+
+
+# In[35]:
+
+
 # Numerical pipeline
-num_pipeline = Pipeline([
-    ('imputer', SimpleImputer(strategy='median'))
+num_pipeline = Pipeline([ # pipeline means create a step-by-step process
+    ('imputer', SimpleImputer(strategy='median')) # replace missing num with middle value
 ])
 
 # OneHot pipeline (for nominal categorical features)
@@ -306,7 +318,7 @@ binary_pipeline = Pipeline([
     ('binary_encoding', OrdinalEncoder())
 ])
 
-# Column transformer
+# Master controller that decides which columns go to which processing station
 processing = ColumnTransformer([
     ('num', num_pipeline, num_cols),
     ('onehot', onehot_pipeline, onehot_cols),
@@ -316,55 +328,89 @@ processing = ColumnTransformer([
 processing
 
 
-# In[14]:
+# In[36]:
 
 
 # Separate What You Want to Predict
 X = df.drop('Churn', axis=1)  # Everything EXCEPT 'Churn' column
 y = df['Churn']               # ONLY the 'Churn' column
 
+# Note:
+# Why X and y?
+# This comes from math notation: y = f(X) means "y depends on X"
+# X: Independent variables (customer info)
+# y: Dependent variable (churn yes/no)
+
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
+# Clean the data
 X_train_cleaned = processing.fit_transform(X_train)
 X_test_cleaned = processing.transform(X_test)
 
 
-# In[46]:
+# In[48]:
 
 
-# smote = SMOTE(random_state=12)
-# X_resampled, y_resampled = smote.fit_resample(X_train_cleaned, y_train)
+# Test if data is preprocessed
+print("Original shape:", X_train.shape)
+print("Processed shape:", X_train_cleaned.shape)
+
+# If OneHot worked, processed data should have MORE columns
+# Example: Original (7000, 20) → Processed (7000, 45)
 
 
-# In[15]:
+# In[50]:
 
 
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
+# Another way to test if data is preprocessed
+# Test 1: All numbers?
+processed_sample = pd.DataFrame(X_train_cleaned)
+print("Any non-numeric values?", processed_sample.select_dtypes(include=['object']).shape[1] > 0)
+
+# Test 2: Can we scale without errors?
+try:
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(X_train_cleaned)
+    print("✅ Pipeline worked! Data is ready for ML")
+except ValueError as e:
+    print(f"❌ Pipeline failed: {e}")
 
 
-X_train_df = pd.DataFrame(X_train)
-X_test_df = pd.DataFrame(X_test_cleaned)
-
-for col in X_train_df.select_dtypes(include=['object']).columns:
-    X_train_df[col] = X_train_df[col].astype('category').cat.codes
-for col in X_test_df.select_dtypes(include=['object']).columns:
-    X_test_df[col] = X_test_df[col].astype('category').cat.codes
+# In[43]:
 
 
-X_test_df = X_test_df.reindex(columns=X_train_df.columns, fill_value=0)
+# Check if your data is imbalanced
+print("Churn distribution:")
+print(y_train.value_counts())
+print("\nPercentages:")
+print(y_train.value_counts(normalize=True) * 100)
+
+
+# In[51]:
+
+
+# Resampling because the data is imbalanced
+smote = SMOTE(random_state=12)
+X_resampled, y_resampled = smote.fit_resample(X_train_cleaned, y_train)
+
+# Notes:
+# SMOTE = "Synthetic Minority Oversampling TEchnique"
+# What it means: "I'm a tool that creates fake examples of rare cases"
 
 # Scaling
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train_df)
-X_test_scaled = scaler.transform(X_test_df)
+X_resampled_scaled = scaler.fit_transform(X_resampled)
+X_test_scaled = scaler.transform(X_test_cleaned)
 
+# Model Training
+model = LogisticRegression(random_state=42)
+model.fit(X_resampled_scaled, y_resampled)
 
 
 # ## **Phase 6: Model Training**
 
-# In[16]:
+# In[52]:
 
 
 # Train Logistic Regression model
