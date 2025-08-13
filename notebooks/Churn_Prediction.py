@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[26]:
+# In[59]:
 
 
 import pandas as pd
@@ -26,7 +26,7 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-# In[27]:
+# In[60]:
 
 
 # Load dataset
@@ -36,7 +36,7 @@ df = pd.read_csv("../data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 df.head()
 
 
-# In[5]:
+# In[61]:
 
 
 # See how many rows and columns
@@ -83,7 +83,7 @@ df.dtypes
 
 # ## **Phase 3: Data Cleaning**
 
-# In[30]:
+# In[62]:
 
 
 # Convert 'TotalCharges' to numeric, some rows may be blank
@@ -100,7 +100,7 @@ df = df.dropna()
 df.shape
 
 
-# In[31]:
+# In[63]:
 
 
 df.dtypes
@@ -255,14 +255,14 @@ Based on our analysis, both models show strong performance in predicting custome
 
 # ## **Phase 5: Data Preprocessing**
 
-# In[32]:
+# In[64]:
 
 
 # Drop customerID (not useful)
 df.drop(['customerID'], axis=1, inplace=True)
 
 
-# In[33]:
+# In[65]:
 
 
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -272,25 +272,26 @@ print(num_cols)
 print(categorical_cols)
 
 
-# In[34]:
+# In[ ]:
 
 
 # Dynamic column classification based on data types and unique values
+feature_cols = [col for col in categorical_cols if col != 'Churn']
+target_col = 'Churn'
+
 # Binary columns: columns with only 2 unique values (Yes/No)
 binary_cols = []
-for col in categorical_cols:
-    if col != 'Churn':  # Exclude target variable
-        unique_vals = df[col].nunique()
-        if unique_vals == 2:
-            binary_cols.append(col)
+for col in feature_cols:
+    unique_vals = df[col].nunique()
+    if unique_vals == 2:
+        binary_cols.append(col)
 
 # One-hot columns: columns with more than 2 unique values
 onehot_cols = []
-for col in categorical_cols:
-    if col != 'Churn':  # Exclude target variable
-        unique_vals = df[col].nunique()
-        if unique_vals > 2:
-            onehot_cols.append(col)
+for col in feature_cols:
+    unique_vals = df[col].nunique()
+    if unique_vals > 2:
+        onehot_cols.append(col)
 
 print("Binary columns (2 unique values):", binary_cols)
 print("One-hot columns (>2 unique values):", onehot_cols)
@@ -298,7 +299,7 @@ print("One-hot columns (>2 unique values):", onehot_cols)
 # TODO: why aren't we using label encoding?
 
 
-# In[35]:
+# In[ ]:
 
 
 # Numerical pipeline
@@ -328,7 +329,7 @@ processing = ColumnTransformer([
 processing
 
 
-# In[36]:
+# In[71]:
 
 
 # Separate What You Want to Predict
@@ -349,7 +350,7 @@ X_train_cleaned = processing.fit_transform(X_train)
 X_test_cleaned = processing.transform(X_test)
 
 
-# In[48]:
+# In[72]:
 
 
 # Test if data is preprocessed
@@ -360,7 +361,7 @@ print("Processed shape:", X_train_cleaned.shape)
 # Example: Original (7000, 20) → Processed (7000, 45)
 
 
-# In[50]:
+# In[73]:
 
 
 # Another way to test if data is preprocessed
@@ -377,7 +378,7 @@ except ValueError as e:
     print(f"❌ Pipeline failed: {e}")
 
 
-# In[43]:
+# In[74]:
 
 
 # Check if your data is imbalanced
@@ -387,7 +388,7 @@ print("\nPercentages:")
 print(y_train.value_counts(normalize=True) * 100)
 
 
-# In[51]:
+# In[81]:
 
 
 # Resampling because the data is imbalanced
@@ -403,97 +404,75 @@ scaler = StandardScaler()
 X_resampled_scaled = scaler.fit_transform(X_resampled)
 X_test_scaled = scaler.transform(X_test_cleaned)
 
-# Model Training
-model = LogisticRegression(random_state=42)
-model.fit(X_resampled_scaled, y_resampled)
-
 
 # ## **Phase 6: Model Training**
 
-# In[52]:
+# In[82]:
 
 
 # Train Logistic Regression model
 print("Training Logistic Regression model...")
 lr_model = LogisticRegression(random_state=42, max_iter=1000)
-lr_model.fit(X_train_scaled, y_train)
+lr_model.fit(X_resampled_scaled, y_resampled)
 
 # Train SVM model  
 print("Training SVM model...")
 svm_model = SVC(kernel='rbf', random_state=42, probability=True)
-svm_model.fit(X_train_scaled, y_train)
+svm_model.fit(X_resampled_scaled, y_resampled)
 
 print("Model training completed!")
 
 
 # ## **Phase 7: Model Evaluation**
 
-# In[17]:
+# In[83]:
 
-
-# Features and target
-X = df.drop('Churn', axis=1)
-y = df['Churn']
-
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-
-# In[19]:
-
-
-# Create and train model
-log_reg = LogisticRegression(max_iter=1000)
-log_reg.fit(X_train, y_train)
 
 # Predict
-y_pred_lr = log_reg.predict(X_test)
+y_pred_lr = lr_model.predict(X_test_scaled)
 
 
-# In[9]:
+# In[84]:
 
-
-# Create and train SVM
-svm = SVC(probability=True)
-svm.fit(X_train, y_train)
 
 # Predict
-y_pred_svm = svm.predict(X_test)
+y_pred_svm = svm_model.predict(X_test_scaled)
 
 
-# In[10]:
+# In[92]:
 
 
 # Logistic Regression
 print("Logistic Regression:")
 print("Accuracy:", accuracy_score(y_test, y_pred_lr))
-print("Precision:", precision_score(y_test, y_pred_lr))
-print("Recall:", recall_score(y_test, y_pred_lr))
-print("F1 Score:", f1_score(y_test, y_pred_lr))
-print("ROC AUC:", roc_auc_score(y_test, log_reg.predict_proba(X_test)[:,1]))
+print("Precision:", precision_score(y_test, y_pred_lr, pos_label='Yes'))  # 'Yes' = churn
+print("Recall:", recall_score(y_test, y_pred_lr, pos_label='Yes'))       # 'Yes' = churn
+print("F1 Score:", f1_score(y_test, y_pred_lr, pos_label='Yes'))        # 'Yes' = churn
+print("ROC AUC:", roc_auc_score(y_test, lr_model.predict_proba(X_test_scaled)[:,1]))
 print(classification_report(y_test, y_pred_lr))
 
 # SVM
 print("\nSVM:")
 print("Accuracy:", accuracy_score(y_test, y_pred_svm))
-print("Precision:", precision_score(y_test, y_pred_svm))
-print("Recall:", recall_score(y_test, y_pred_svm))
-print("F1 Score:", f1_score(y_test, y_pred_svm))
-print("ROC AUC:", roc_auc_score(y_test, svm.predict_proba(X_test)[:,1]))
+print("Precision:", precision_score(y_test, y_pred_svm, pos_label='Yes'))  # 'Yes' = churn
+print("Recall:", recall_score(y_test, y_pred_svm, pos_label='Yes'))       # 'Yes' = churn
+print("F1 Score:", f1_score(y_test, y_pred_svm, pos_label='Yes'))        # 'Yes' = churn
+print("ROC AUC:", roc_auc_score(y_test, svm_model.predict_proba(X_test_scaled)[:,1]))
 print(classification_report(y_test, y_pred_svm))
 
 
-# In[11]:
+# In[97]:
 
 
-# Pick a random customer from test set
-sample = X_test.iloc[0]
+# Use already processed test data
+sample_idx = 0
+sample_processed = X_test_scaled[sample_idx:sample_idx+1]  # Get first sample from processed test set
 
 # Predict churn (Logistic Regression)
-result = log_reg.predict([sample])
+result = lr_model.predict(sample_processed)
 print("Will churn (Logistic Regression):", result)
 
 # Predict churn (SVM)
-result_svm = svm.predict([sample])
+result_svm = svm_model.predict(sample_processed)
 print("Will churn (SVM):", result_svm)
 
