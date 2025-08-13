@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[46]:
+# In[55]:
 
 
 import pandas as pd
@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report, confusion_matrix
 
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, LabelEncoder
@@ -411,7 +412,7 @@ X_test_scaled = scaler.transform(X_test_cleaned)
 
 # ## **Phase 6: Model Training**
 
-# In[49]:
+# In[56]:
 
 
 # Train Logistic Regression model
@@ -437,12 +438,21 @@ xgb_model.fit(X_train_cleaned, y_train_encoded)
 
 # Note: xgb model handle imbalanced data better internally through scale_pos_weight
 
+# Train Random Forest model
+print("Training Random Forest model...")
+rf_model = RandomForestClassifier(
+    n_estimators=100,
+    class_weight='balanced',  # Handles imbalance
+    random_state=42
+)
+rf_model.fit(X_train_cleaned, y_train)
+
 print("Model training completed!")
 
 
 # ## **Phase 7: Model Evaluation**
 
-# In[50]:
+# In[57]:
 
 
 # Make predictions
@@ -450,6 +460,7 @@ y_pred_lr = lr_model.predict(X_test_scaled)
 y_pred_svm = svm_model.predict(X_test_scaled)
 y_pred_xgb_encoded = xgb_model.predict(X_test_cleaned)
 y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back to 'Yes'/'No'
+y_pred_rf = rf_model.predict(X_test_cleaned)
 
 
 # In[52]:
@@ -474,7 +485,7 @@ print("ROC AUC:", roc_auc_score(y_test, svm_model.predict_proba(X_test_scaled)[:
 print(classification_report(y_test, y_pred_svm))
 
 
-# In[53]:
+# In[58]:
 
 
 # XGBoost
@@ -485,4 +496,13 @@ print("Recall:", recall_score(y_test, y_pred_xgb, pos_label='Yes'))
 print("F1 Score:", f1_score(y_test, y_pred_xgb, pos_label='Yes'))
 print("ROC AUC:", roc_auc_score(y_test_encoded, xgb_model.predict_proba(X_test_cleaned)[:,1]))
 print(classification_report(y_test, y_pred_xgb))
+
+# Random Forest
+print("\nRandom Forest:")
+print("Accuracy:", accuracy_score(y_test, y_pred_rf))
+print("Precision:", precision_score(y_test, y_pred_rf, pos_label='Yes'))
+print("Recall:", recall_score(y_test, y_pred_rf, pos_label='Yes'))
+print("F1 Score:", f1_score(y_test, y_pred_rf, pos_label='Yes'))
+print("ROC AUC:", roc_auc_score(y_test_encoded, rf_model.predict_proba(X_test_cleaned)[:,1]))
+print(classification_report(y_test, y_pred_rf))
 
