@@ -122,7 +122,6 @@ df.shape
 ### Main tasks:
 - **Remove useless columns**: 
   - `customerID` - just a random number, doesn't tell us anything about churn
-  - Other columns that don't help predict if someone will leave
 - **Convert text to numbers**:
   - "Male/Female" → 1/0 (computer only understands numbers)
   - "Month-to-month/One year/Two year" → separate columns with 1/0
@@ -130,8 +129,14 @@ df.shape
   - X = customer info (age, gender, services, etc.)
   - y = whether they churned (Yes/No)
   - Split data: 80% to train, 20% to test
-- **Handle imbalanced data**: If 80% stayed and 20% left, balance the data so the model learns from both groups equally
-- **Scale numerical features**: Make all numbers (like monthly charges, tenure) the same size so the model doesn't work poorly and favor big numbers over small ones
+- **Handle imbalanced data**: 
+  - Use SMOTE to create synthetic examples of minority class (churned customers)
+  - Balance the data so the model learns from both groups equally
+- **Scale numerical features**: 
+  - Use StandardScaler to make all numbers the same size
+  - Prevents the model from favoring big numbers over small ones
+- **Convert target labels**: 
+  - Transform 'Yes'/'No' to 1/0 for algorithms that need numeric targets (xgboost algorithm)
 
 ### Why this matters:
 - Computer needs clean, simple data to learn from
@@ -152,8 +157,10 @@ df.shape
 
 ### Popular algorithms to try:
 - **Logistic Regression**: Simple, fast, good starting point
+- **SVM (Support Vector Machine)**: Good for complex decision boundaries
+- **XGBoost**: Advanced ensemble method, often wins competitions, very powerful
+  - Handles imbalanced data better with `scale_pos_weight` parameter
 - **Random Forest**: More powerful, handles complex patterns
-- **XGBoost**: Often wins competitions, very powerful
 
 ### Why this matters:
 - This is where the "AI" happens - the model learns to predict churn
@@ -171,10 +178,18 @@ df.shape
 - **Precision**: When model says "will churn", how often is it right?
 - **Recall**: Of customers who actually churned, how many did we catch?
 - **F1-Score**: Balance between precision and recall
+- **ROC AUC**: How well the model distinguishes between churn and no-churn
+
+### What you'll evaluate:
+- **Logistic Regression performance**: Simple linear model results
+- **SVM performance**: Support vector machine results  
+- **XGBoost performance**: Advanced ensemble model results
+- **Model comparison**: Which algorithm performs best?
 
 ### Why this matters:
 - Tells you if your model is good enough to use in real business
 - Shows where the model makes mistakes
+- Helps choose the best algorithm for deployment
 
 ---
 

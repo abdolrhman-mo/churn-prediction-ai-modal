@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[59]:
+# In[46]:
 
 
 import pandas as pd
@@ -14,9 +14,10 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
+from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report, confusion_matrix
 
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, LabelEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -26,7 +27,7 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-# In[60]:
+# In[17]:
 
 
 # Load dataset
@@ -36,14 +37,14 @@ df = pd.read_csv("../data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 df.head()
 
 
-# In[61]:
+# In[18]:
 
 
 # See how many rows and columns
 df.shape
 
 
-# In[6]:
+# In[19]:
 
 
 # See column names and types
@@ -57,21 +58,21 @@ df.info()
 
 # ## **Phase 2: Data Quality Assessment**
 
-# In[7]:
+# In[20]:
 
 
 #  Count missing values in each column
 df.isnull().sum()
 
 
-# In[28]:
+# In[21]:
 
 
 # Check for duplicate customers
 df.duplicated().sum()
 
 
-# In[29]:
+# In[22]:
 
 
 # See current data types
@@ -83,7 +84,7 @@ df.dtypes
 
 # ## **Phase 3: Data Cleaning**
 
-# In[62]:
+# In[23]:
 
 
 # Convert 'TotalCharges' to numeric, some rows may be blank
@@ -100,7 +101,7 @@ df = df.dropna()
 df.shape
 
 
-# In[63]:
+# In[24]:
 
 
 df.dtypes
@@ -108,7 +109,7 @@ df.dtypes
 
 # ## **Phase 4: Data Visualization & Exploration**
 
-# In[16]:
+# In[25]:
 
 
 # Plot churn count
@@ -124,7 +125,7 @@ sns.countplot(x='Contract', hue='Churn', data=df)
 plt.title("Churn by Contract Type")
 
 
-# In[17]:
+# In[26]:
 
 
 # # Function to evaluate model performance
@@ -152,7 +153,7 @@ plt.title("Churn by Contract Type")
 
 
 
-# In[18]:
+# In[27]:
 
 
 # # Model comparison visualization
@@ -255,14 +256,14 @@ Based on our analysis, both models show strong performance in predicting custome
 
 # ## **Phase 5: Data Preprocessing**
 
-# In[64]:
+# In[28]:
 
 
 # Drop customerID (not useful)
 df.drop(['customerID'], axis=1, inplace=True)
 
 
-# In[65]:
+# In[29]:
 
 
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -296,10 +297,8 @@ for col in feature_cols:
 print("Binary columns (2 unique values):", binary_cols)
 print("One-hot columns (>2 unique values):", onehot_cols)
 
-# TODO: why aren't we using label encoding?
 
-
-# In[ ]:
+# In[31]:
 
 
 # Numerical pipeline
@@ -329,7 +328,7 @@ processing = ColumnTransformer([
 processing
 
 
-# In[71]:
+# In[ ]:
 
 
 # Separate What You Want to Predict
@@ -349,8 +348,13 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 X_train_cleaned = processing.fit_transform(X_train)
 X_test_cleaned = processing.transform(X_test)
 
+# Convert target labels to numerical for XGBoost
+label_encoder = LabelEncoder()
+y_train_encoded = label_encoder.fit_transform(y_train)
+y_test_encoded = label_encoder.transform(y_test)
 
-# In[72]:
+
+# In[33]:
 
 
 # Test if data is preprocessed
@@ -361,7 +365,7 @@ print("Processed shape:", X_train_cleaned.shape)
 # Example: Original (7000, 20) → Processed (7000, 45)
 
 
-# In[73]:
+# In[34]:
 
 
 # Another way to test if data is preprocessed
@@ -378,7 +382,7 @@ except ValueError as e:
     print(f"❌ Pipeline failed: {e}")
 
 
-# In[74]:
+# In[35]:
 
 
 # Check if your data is imbalanced
@@ -388,7 +392,7 @@ print("\nPercentages:")
 print(y_train.value_counts(normalize=True) * 100)
 
 
-# In[81]:
+# In[36]:
 
 
 # Resampling because the data is imbalanced
@@ -407,7 +411,7 @@ X_test_scaled = scaler.transform(X_test_cleaned)
 
 # ## **Phase 6: Model Training**
 
-# In[82]:
+# In[49]:
 
 
 # Train Logistic Regression model
@@ -420,26 +424,35 @@ print("Training SVM model...")
 svm_model = SVC(kernel='rbf', random_state=42, probability=True)
 svm_model.fit(X_resampled_scaled, y_resampled)
 
+# Train XGBoost model
+print("Training XGBoost model...")
+# Calculate class weight for imbalanced data
+pos_weight = (y_train == 'No').sum() / (y_train == 'Yes').sum()
+xgb_model = XGBClassifier(
+    scale_pos_weight=pos_weight,
+    random_state=42,
+    eval_metric='logloss'
+)
+xgb_model.fit(X_train_cleaned, y_train_encoded)
+
+# Note: xgb model handle imbalanced data better internally through scale_pos_weight
+
 print("Model training completed!")
 
 
 # ## **Phase 7: Model Evaluation**
 
-# In[83]:
+# In[50]:
 
 
-# Predict
+# Make predictions
 y_pred_lr = lr_model.predict(X_test_scaled)
-
-
-# In[84]:
-
-
-# Predict
 y_pred_svm = svm_model.predict(X_test_scaled)
+y_pred_xgb_encoded = xgb_model.predict(X_test_cleaned)
+y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back to 'Yes'/'No'
 
 
-# In[92]:
+# In[52]:
 
 
 # Logistic Regression
@@ -461,18 +474,15 @@ print("ROC AUC:", roc_auc_score(y_test, svm_model.predict_proba(X_test_scaled)[:
 print(classification_report(y_test, y_pred_svm))
 
 
-# In[97]:
+# In[53]:
 
 
-# Use already processed test data
-sample_idx = 0
-sample_processed = X_test_scaled[sample_idx:sample_idx+1]  # Get first sample from processed test set
-
-# Predict churn (Logistic Regression)
-result = lr_model.predict(sample_processed)
-print("Will churn (Logistic Regression):", result)
-
-# Predict churn (SVM)
-result_svm = svm_model.predict(sample_processed)
-print("Will churn (SVM):", result_svm)
+# XGBoost
+print("\nXGBoost:")
+print("Accuracy:", accuracy_score(y_test, y_pred_xgb))
+print("Precision:", precision_score(y_test, y_pred_xgb, pos_label='Yes'))
+print("Recall:", recall_score(y_test, y_pred_xgb, pos_label='Yes'))
+print("F1 Score:", f1_score(y_test, y_pred_xgb, pos_label='Yes'))
+print("ROC AUC:", roc_auc_score(y_test_encoded, xgb_model.predict_proba(X_test_cleaned)[:,1]))
+print(classification_report(y_test, y_pred_xgb))
 
