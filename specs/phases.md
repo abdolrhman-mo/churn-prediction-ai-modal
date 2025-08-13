@@ -210,20 +210,6 @@ df.shape
 
 ---
 
-## 🛠 **Tools & Libraries Needed**
-
-```python
-import pandas as pd           # Data manipulation
-import numpy as np            # Math operations  
-import matplotlib.pyplot as plt  # Basic plotting
-import seaborn as sns         # Pretty plots
-from sklearn.model_selection import train_test_split  # Data splitting
-from sklearn.ensemble import RandomForestClassifier   # ML algorithm
-from sklearn.metrics import accuracy_score, classification_report  # Evaluation
-```
-
----
-
 ## 📁 **Expected Outputs**
 
 1. **Trained model file**: Save your model to use later
