@@ -86,7 +86,9 @@ df.shape
 
 ---
 
-## 📊 **Phase 4: Data Visualization & Exploration**
+## **Phase 4: Feature Engineering**
+
+## 📊 **Phase 5: Data Visualization & Exploration**
 
 ### What this means:
 - Look at your data with pictures instead of just numbers
@@ -113,7 +115,7 @@ df.shape
 
 ---
 
-## ⚙️ **Phase 5: Data Preprocessing**
+## ⚙️ **Phase 6: Data Preprocessing**
 
 ### What this means:
 - Clean up your data so the computer can understand it
@@ -144,7 +146,7 @@ df.shape
 
 ---
 
-## 🤖 **Phase 6: Model Training**
+## 🤖 **Phase 7: Model Training**
 
 ### What this means:
 - Teach a computer algorithm to recognize patterns between customer info and churn
@@ -167,7 +169,7 @@ df.shape
 
 ---
 
-## 📊 **Phase 7: Model Evaluation**
+## 📊 **Phase 8: Model Evaluation**
 
 ### What this means:
 - Test how well your model can predict churn on customers it has never seen before
@@ -193,7 +195,7 @@ df.shape
 
 ---
 
-## 🎯 **Phase 8: Model Optimization** (Optional)
+## 🎯 **Phase 9: Model Optimization** (Optional)
 
 ### What this means:
 - Fine-tune your model to get better predictions

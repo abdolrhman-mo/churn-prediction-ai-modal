@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[55]:
+# In[175]:
 
 
 import pandas as pd
@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
@@ -28,7 +28,7 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-# In[17]:
+# In[176]:
 
 
 # Load dataset
@@ -38,14 +38,14 @@ df = pd.read_csv("../data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 df.head()
 
 
-# In[18]:
+# In[177]:
 
 
 # See how many rows and columns
 df.shape
 
 
-# In[19]:
+# In[178]:
 
 
 # See column names and types
@@ -59,21 +59,21 @@ df.info()
 
 # ## **Phase 2: Data Quality Assessment**
 
-# In[20]:
+# In[179]:
 
 
 #  Count missing values in each column
 df.isnull().sum()
 
 
-# In[21]:
+# In[180]:
 
 
 # Check for duplicate customers
 df.duplicated().sum()
 
 
-# In[22]:
+# In[181]:
 
 
 # See current data types
@@ -85,7 +85,7 @@ df.dtypes
 
 # ## **Phase 3: Data Cleaning**
 
-# In[23]:
+# In[182]:
 
 
 # Convert 'TotalCharges' to numeric, some rows may be blank
@@ -102,15 +102,382 @@ df = df.dropna()
 df.shape
 
 
-# In[24]:
+# In[183]:
 
 
 df.dtypes
 
 
-# ## **Phase 4: Data Visualization & Exploration**
+# ## **Phase 4: Feature Engineering**
 
-# In[25]:
+# In[184]:
+
+
+# # CHUNK 1: Basic Data Exploration
+# # Purpose: See what columns you have and their types
+
+# print("=== YOUR DATASET OVERVIEW ===")
+# print(f"Shape: {df.shape}")
+# print(f"Columns: {df.columns.tolist()}")
+# print()
+
+# print("=== COLUMN TYPES ===")
+# numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+# categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+
+# print(f"Numeric columns ({len(numeric_cols)}): {numeric_cols}")
+# print(f"Categorical columns ({len(categorical_cols)}): {categorical_cols}")
+# print()
+
+# print("=== QUICK PREVIEW ===")
+# print(df.head(3))
+
+
+# In[185]:
+
+
+# # CHUNK 2: Find What Drives Churn
+# # Purpose: Discover which existing features matter most
+
+# print("=== CHURN RATES BY CATEGORY ===")
+# print("This shows you which categories have highest churn - these are GOLDMINES for features!")
+# print()
+
+# # Check categorical columns for churn patterns
+# for col in categorical_cols:
+#     if col in df.columns:
+#         churn_rate = df.groupby(col)['Churn'].value_counts(normalize=True).unstack()
+#         churn_rate['Churn_Rate'] = churn_rate['Yes'] / (churn_rate['Yes'] + churn_rate['No'])
+
+#         print(f"\n{col} - Churn Rates:")
+#         print(churn_rate['Churn_Rate'].sort_values(ascending=False).round(3))
+
+#         # Highlight high-risk categories
+#         high_risk = churn_rate['Churn_Rate'] > 0.4
+#         if high_risk.any():
+#             print(f"🚨 HIGH RISK categories in {col}: {high_risk[high_risk].index.tolist()}")
+
+
+# In[186]:
+
+
+# # CHUNK 3: See How Money Affects Churn
+# # Purpose: Financial patterns often drive customer behavior
+
+# print("=== MONEY vs CHURN ANALYSIS ===")
+
+# # Plot 1: Monthly Charges vs Churn
+# plt.figure(figsize=(12, 4))
+
+# plt.subplot(1, 3, 1)
+# sns.boxplot(data=df, x='Churn', y='MonthlyCharges')
+# plt.title('Monthly Charges vs Churn')
+# plt.ylabel('Monthly Charges ($)')
+
+# # Plot 2: Tenure vs Churn  
+# plt.subplot(1, 3, 2)
+# sns.boxplot(data=df, x='Churn', y='tenure')
+# plt.title('Tenure vs Churn')
+# plt.ylabel('Months with Company')
+
+# # Plot 3: Total Charges vs Churn
+# plt.subplot(1, 3, 3)
+# sns.boxplot(data=df, x='Churn', y='TotalCharges')
+# plt.title('Total Charges vs Churn')
+# plt.ylabel('Total Charges ($)')
+
+# plt.tight_layout()
+# plt.show()
+
+# # Show the actual numbers
+# print("\n=== NUMERICAL INSIGHTS ===")
+# for col in ['MonthlyCharges', 'tenure', 'TotalCharges']:
+#     if col in df.columns:
+#         churn_stats = df.groupby('Churn')[col].agg(['mean', 'median']).round(2)
+#         print(f"\n{col}:")
+#         print(churn_stats)
+
+#         # Feature idea generator
+#         churned_avg = churn_stats.loc['Yes', 'mean']
+#         stayed_avg = churn_stats.loc['No', 'mean']
+
+#         if churned_avg > stayed_avg:
+#             print(f"💡 FEATURE IDEA: Create 'high_{col.lower()}' flag for values > {churned_avg:.0f}")
+#         else:
+#             print(f"💡 FEATURE IDEA: Create 'low_{col.lower()}' flag for values < {churned_avg:.0f}")
+
+
+# In[187]:
+
+
+# # CHUNK 4: Create Your First Feature - Service Count
+# # Purpose: Customers with more services are usually stickier (less likely to churn)
+
+# print("=== CREATING SERVICE COUNT FEATURE ===")
+# print("Theory: More services = harder to leave = lower churn")
+# print()
+
+# # Step 1: Find all service columns
+# service_cols = ['PhoneService', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 
+#                 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
+
+# # Step 2: Check what values these columns have
+# print("Service column values:")
+# for col in service_cols[:3]:  # Just show first 3 for brevity
+#     if col in df.columns:
+#         print(f"{col}: {df[col].unique()}")
+# print()
+
+# # Step 3: Convert to 1/0 format for counting
+# print("Converting services to 1/0...")
+# df_temp = df.copy()  # Work on copy first
+
+# service_count = 0
+# for col in service_cols:
+#     if col in df.columns:
+#         if col == 'InternetService':
+#             # Special case: 'No' = 0, any internet service = 1
+#             df_temp[col + '_binary'] = (df_temp[col] != 'No').astype(int)
+#         else:
+#             # Regular case: 'Yes' = 1, 'No' = 0
+#             df_temp[col + '_binary'] = (df_temp[col] == 'Yes').astype(int)
+
+#         service_count += df_temp[col + '_binary']
+
+# # Step 4: Create the feature
+# df_temp['total_services'] = service_count
+
+# # Step 5: Test if it works
+# print("✅ Feature created! Sample results:")
+# print(df_temp[['total_services']].head())
+# print()
+# print("Distribution of service counts:")
+# print(df_temp['total_services'].value_counts().sort_index())
+# print()
+
+# # Step 6: Validate the theory - does it predict churn?
+# print("=== TESTING THE THEORY ===")
+# churn_by_services = df_temp.groupby('total_services')['Churn'].value_counts(normalize=True).unstack()
+# churn_by_services['Churn_Rate'] = churn_by_services['Yes'] / (churn_by_services['Yes'] + churn_by_services['No'])
+
+# print("Churn rate by number of services:")
+# print(churn_by_services['Churn_Rate'].round(3))
+
+# if churn_by_services['Churn_Rate'].iloc[0] > churn_by_services['Churn_Rate'].iloc[-1]:
+#     print("✅ THEORY CONFIRMED: Fewer services = higher churn!")
+# else:
+#     print("❌ Theory not confirmed - investigate further")
+
+
+# In[188]:
+
+
+# # CHUNK 5: Create Risk Profile Feature
+# # Purpose: Combine multiple risky factors into one powerful feature
+
+# print("=== CREATING RISK PROFILE FEATURE ===")
+# print("Theory: Month-to-month + New customer + High charges = VERY RISKY")
+# print()
+
+# # Step 1: Define what makes a customer risky
+# print("Risk factors:")
+# print("1. Contract = Month-to-month (no commitment)")
+# print("2. tenure <= 12 months (new customer)")
+# print("3. MonthlyCharges > 70 (expensive)")
+# print()
+
+# # Step 2: Check each risk factor individually
+# df_temp = df.copy()
+
+# risk1 = df_temp['Contract'] == 'Month-to-month'
+# risk2 = df_temp['tenure'] <= 12
+# risk3 = df_temp['MonthlyCharges'] > 70
+
+# print("Individual risk factor churn rates:")
+# print(f"Month-to-month: {df_temp[risk1]['Churn'].value_counts(normalize=True).get('Yes', 0):.3f}")
+# print(f"New customer: {df_temp[risk2]['Churn'].value_counts(normalize=True).get('Yes', 0):.3f}")
+# print(f"High charges: {df_temp[risk3]['Churn'].value_counts(normalize=True).get('Yes', 0):.3f}")
+# print()
+
+# # Step 3: Combine all risk factors
+# df_temp['high_risk_profile'] = (risk1 & risk2 & risk3).astype(int)
+
+# print("=== RISK PROFILE RESULTS ===")
+# print(f"High risk customers: {df_temp['high_risk_profile'].sum()} out of {len(df_temp)}")
+# print(f"Percentage: {df_temp['high_risk_profile'].mean()*100:.1f}%")
+# print()
+
+# # Step 4: Test the power of this feature
+# risk_churn = df_temp.groupby('high_risk_profile')['Churn'].value_counts(normalize=True).unstack()
+# risk_churn['Churn_Rate'] = risk_churn['Yes'] / (risk_churn['Yes'] + risk_churn['No'])
+
+# print("Churn rates:")
+# print(f"Normal customers (0): {risk_churn.loc[0, 'Churn_Rate']:.3f}")
+# print(f"High risk customers (1): {risk_churn.loc[1, 'Churn_Rate']:.3f}")
+
+# improvement = risk_churn.loc[1, 'Churn_Rate'] / risk_churn.loc[0, 'Churn_Rate']
+# print(f"\n🎯 HIGH RISK CUSTOMERS ARE {improvement:.1f}x MORE LIKELY TO CHURN!")
+
+# if improvement > 2:
+#     print("✅ EXCELLENT FEATURE! This will help your model a lot!")
+# elif improvement > 1.5:
+#     print("✅ Good feature! This should improve your model.")
+# else:
+#     print("⚠️ Weak feature - try different combinations.")
+
+
+# In[189]:
+
+
+# # CHUNK 6: Create Value Perception Features
+# # Purpose: Calculate ratios that show if customers feel they get good value
+
+# print("=== CREATING VALUE-BASED FEATURES ===")
+# print("Theory: Customers leave when they feel they're not getting good value for money")
+# print()
+
+# df_temp = df.copy()
+
+# # Feature 1: Monthly charges per tenure month
+# print("Feature 1: Average monthly spend over customer lifetime")
+# df_temp['avg_monthly_spend'] = df_temp['TotalCharges'] / (df_temp['tenure'] + 1)  # +1 to avoid division by 0
+
+# print("Sample values:")
+# print(df_temp[['MonthlyCharges', 'TotalCharges', 'tenure', 'avg_monthly_spend']].head())
+# print()
+
+# # Feature 2: Charges per service (if we have service count)
+# if 'total_services' not in df_temp.columns:
+#     # Quick service count for this example
+#     service_cols = ['PhoneService', 'InternetService', 'OnlineSecurity', 'OnlineBackup']
+#     service_count = 0
+#     for col in service_cols:
+#         if col in df.columns:
+#             if col == 'InternetService':
+#                 service_count += (df[col] != 'No').astype(int)
+#             else:
+#                 service_count += (df[col] == 'Yes').astype(int)
+#     df_temp['total_services'] = service_count
+
+# print("Feature 2: Price per service")
+# df_temp['price_per_service'] = df_temp['MonthlyCharges'] / (df_temp['total_services'] + 1)
+
+# print("Sample values:")
+# print(df_temp[['MonthlyCharges', 'total_services', 'price_per_service']].head())
+# print()
+
+# # Feature 3: Value bins
+# print("Feature 3: Value perception categories")
+# df_temp['value_perception'] = pd.cut(df_temp['price_per_service'], 
+#                                    bins=[0, 15, 25, 40, 1000],
+#                                    labels=['Great_Value', 'Good_Value', 'Fair_Value', 'Poor_Value'])
+
+# print("Value perception distribution:")
+# print(df_temp['value_perception'].value_counts())
+# print()
+
+# # Test these features
+# print("=== TESTING VALUE FEATURES ===")
+
+# # Test avg_monthly_spend
+# print("1. Average monthly spend vs churn:")
+# spend_churn = df_temp.groupby('Churn')['avg_monthly_spend'].mean()
+# print(f"Churned customers: ${spend_churn['Yes']:.2f}/month")
+# print(f"Stayed customers: ${spend_churn['No']:.2f}/month")
+# print()
+
+# # Test value perception
+# print("2. Value perception vs churn:")
+# value_churn = df_temp.groupby('value_perception')['Churn'].value_counts(normalize=True).unstack()
+# if 'Yes' in value_churn.columns:
+#     value_churn['Churn_Rate'] = value_churn['Yes'] / (value_churn['Yes'] + value_churn['No'])
+#     print("Churn rates by value perception:")
+#     print(value_churn['Churn_Rate'].round(3))
+
+#     if value_churn['Churn_Rate'].iloc[-1] > value_churn['Churn_Rate'].iloc[0]:
+#         print("✅ CONFIRMED: Poor value perception leads to higher churn!")
+#     else:
+#         print("❌ Hypothesis not confirmed")
+
+
+# In[190]:
+
+
+# # ## **Phase 4: Feature Engineering**
+
+# def create_churn_features(df):
+#     """Create comprehensive features for churn prediction"""
+#     df = df.copy()
+
+#     # 1. Tenure-based features
+#     df['is_new_customer'] = (df['tenure'] <= 6).astype(int)
+#     df['is_long_term'] = (df['tenure'] >= 24).astype(int)
+#     df['monthly_per_tenure'] = df['MonthlyCharges'] / (df['tenure'] + 1)
+#     df['total_per_tenure'] = df['TotalCharges'] / (df['tenure'] + 1)
+
+#     # 2. Service usage
+#     # First, let's check what values we actually have
+#     service_cols = ['PhoneService', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 
+#                     'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
+
+#     # Handle different types of values in service columns
+#     df_services = df[service_cols].copy()
+#     for col in service_cols:
+#         if col == 'InternetService':
+#             # InternetService has 'DSL', 'Fiber optic', 'No' - treat 'No' as 0, others as 1
+#             df_services[col] = (df_services[col] != 'No').astype(int)
+#         else:
+#             # Other columns should be Yes/No, but let's be safe
+#             df_services[col] = df_services[col].replace({'Yes': 1, 'No': 0})
+#             # Handle any unexpected values
+#             df_services[col] = pd.to_numeric(df_services[col], errors='coerce').fillna(0)
+
+#     df['total_services'] = df_services.sum(axis=1)
+#     df['service_utilization'] = df['total_services'] / 8
+
+#     # 3. Financial features
+#     df['is_high_spender'] = (df['MonthlyCharges'] > df['MonthlyCharges'].quantile(0.75)).astype(int)
+#     df['charges_per_service'] = df['MonthlyCharges'] / (df['total_services'] + 1)
+
+#     # 4. Risk combinations
+#     df['high_risk'] = (
+#         (df['Contract'] == 'Month-to-month') & 
+#         (df['tenure'] <= 12) & 
+#         (df['MonthlyCharges'] > 65)
+#     ).astype(int)
+
+#     # 5. Satisfaction proxies
+#     df['likely_satisfied'] = (
+#         (df['Contract'] != 'Month-to-month') &
+#         (df['TechSupport'] == 'Yes')
+#     ).astype(int)
+
+#     # 6. Binned features
+#     df['tenure_group'] = pd.cut(df['tenure'], 
+#                                bins=[0, 6, 12, 24, 100], 
+#                                labels=['New', 'Growing', 'Mature', 'Veteran'])
+
+#     df['charges_group'] = pd.cut(df['MonthlyCharges'],
+#                                 bins=[0, 35, 55, 75, 120],
+#                                 labels=['Budget', 'Standard', 'Premium', 'Enterprise'])
+
+#     return df
+
+# # Apply feature engineering
+# print("Original dataset shape:", df.shape)
+# df = create_churn_features(df)
+# print("Dataset shape after feature engineering:", df.shape)
+# print("New features created!")
+
+# # Check some of the new features
+# print("\nSample of new features:")
+# new_features = ['is_new_customer', 'total_services', 'high_risk', 'likely_satisfied']
+# print(df[new_features].head())
+
+
+# ## **Phase 5: Data Visualization & Exploration**
+
+# In[191]:
 
 
 # Plot churn count
@@ -126,117 +493,16 @@ sns.countplot(x='Contract', hue='Churn', data=df)
 plt.title("Churn by Contract Type")
 
 
-# In[27]:
+# ## **Phase 6: Data Preprocessing**
 
-
-# # Model comparison visualization
-# fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-
-# # Confusion matrix for Logistic Regression
-# cm_lr = confusion_matrix(y_test, lr_predictions)
-# sns.heatmap(cm_lr, annot=True, fmt='d', cmap='Blues', ax=axes[0])
-# axes[0].set_title('Logistic Regression - Confusion Matrix')
-# axes[0].set_xlabel('Predicted')
-# axes[0].set_ylabel('Actual')
-
-# # Confusion matrix for SVM
-# cm_svm = confusion_matrix(y_test, svm_predictions)
-# sns.heatmap(cm_svm, annot=True, fmt='d', cmap='Greens', ax=axes[1])
-# axes[1].set_title('SVM - Confusion Matrix')
-# axes[1].set_xlabel('Predicted')
-# axes[1].set_ylabel('Actual')
-
-# plt.tight_layout()
-# plt.show()
-
-# # Performance comparison summary
-# models_performance = {
-#     'Model': ['Logistic Regression', 'SVM'],
-#     'Accuracy': [
-#         accuracy_score(y_test, lr_predictions),
-#         accuracy_score(y_test, svm_predictions)
-#     ],
-#     'Precision': [
-#         precision_score(y_test, lr_predictions),
-#         precision_score(y_test, svm_predictions)
-#     ],
-#     'Recall': [
-#         recall_score(y_test, lr_predictions),
-#         recall_score(y_test, svm_predictions)
-#     ],
-#     'F1-Score': [
-#         f1_score(y_test, lr_predictions),
-#         f1_score(y_test, svm_predictions)
-#     ]
-# }
-
-# comparison_df = pd.DataFrame(models_performance)
-# print("\n=== Model Performance Comparison ===")
-# print(comparison_df.round(4))
-
-## 7. Conclusions and Business Insights {#conclusions}
-
-### Model Performance Summary
-
-Based on our analysis, both models show strong performance in predicting customer churn:
-
-**Key Findings:**
-- Both Logistic Regression and SVM achieved high accuracy scores
-- The models can effectively identify customers at risk of churning
-- Feature engineering and data preprocessing were crucial for model performance
-
-### Business Recommendations
-
-1. **Focus on Contract Length**: Month-to-month customers are at highest risk of churn
-   - **Action**: Offer incentives for longer-term contracts
-   - **Strategy**: Develop retention programs specifically for month-to-month customers
-
-2. **Early Warning System**: Use the model predictions to implement proactive retention
-   - **Action**: Contact high-risk customers before they churn
-   - **Strategy**: Personalized offers based on customer profiles
-
-3. **Service Optimization**: Analyze features that contribute most to churn
-   - **Action**: Improve services that correlate with higher churn rates
-   - **Strategy**: Focus on customer experience improvements
-
-### Next Steps
-
-1. **Feature Importance Analysis**: Investigate which features contribute most to predictions
-2. **Model Tuning**: Hyperparameter optimization for better performance
-3. **Real-time Implementation**: Deploy the model for ongoing churn prediction
-4. **A/B Testing**: Test retention strategies on predicted high-risk customers
-
-### Technical Notes
-
-- **Data Quality**: The dataset was clean with minimal missing values
-- **Feature Engineering**: One-hot encoding was effective for categorical variables
-- **Model Selection**: Both models performed well, suggesting the problem is well-suited to linear approaches
-- **Scalability**: The preprocessing pipeline can be applied to new data for ongoing predictions
-### Key Insights from Visualizations
-
-**Churn Distribution:**
-- The dataset shows an imbalanced distribution with more customers staying than leaving
-- This is typical in churn prediction problems
-
-**Gender Analysis:**
-- Churn appears to be relatively balanced between male and female customers
-- Gender may not be a strong predictor of churn
-
-**Contract Type Analysis:**
-- Month-to-month contracts show the highest churn rate
-- Customers with longer-term contracts (One year, Two year) are much less likely to churn
-- This suggests contract length is a strong predictor of customer retention
-
-# ## **Phase 5: Data Preprocessing**
-
-# In[ ]:
+# In[192]:
 
 
 # Drop customerID (not useful)
 df.drop(['customerID'], axis=1, inplace=True)
 
 
-# In[29]:
+# In[193]:
 
 
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -246,7 +512,7 @@ print(num_cols)
 print(categorical_cols)
 
 
-# In[ ]:
+# In[194]:
 
 
 # Dynamic column classification based on data types and unique values
@@ -271,7 +537,7 @@ print("Binary columns (2 unique values):", binary_cols)
 print("One-hot columns (>2 unique values):", onehot_cols)
 
 
-# In[31]:
+# In[195]:
 
 
 # Numerical pipeline
@@ -301,7 +567,7 @@ processing = ColumnTransformer([
 processing
 
 
-# In[ ]:
+# In[196]:
 
 
 # Separate What You Want to Predict
@@ -327,7 +593,7 @@ y_train_encoded = label_encoder.fit_transform(y_train)
 y_test_encoded = label_encoder.transform(y_test)
 
 
-# In[33]:
+# In[197]:
 
 
 # Test if data is preprocessed
@@ -338,7 +604,7 @@ print("Processed shape:", X_train_cleaned.shape)
 # Example: Original (7000, 20) → Processed (7000, 45)
 
 
-# In[34]:
+# In[198]:
 
 
 # Another way to test if data is preprocessed
@@ -355,7 +621,7 @@ except ValueError as e:
     print(f"❌ Pipeline failed: {e}")
 
 
-# In[35]:
+# In[199]:
 
 
 # Check if your data is imbalanced
@@ -365,7 +631,7 @@ print("\nPercentages:")
 print(y_train.value_counts(normalize=True) * 100)
 
 
-# In[36]:
+# In[200]:
 
 
 # Resampling because the data is imbalanced
@@ -382,9 +648,9 @@ X_resampled_scaled = scaler.fit_transform(X_resampled)
 X_test_scaled = scaler.transform(X_test_cleaned)
 
 
-# ## **Phase 6: Model Training**
+# ## **Phase 7: Model Training**
 
-# In[56]:
+# In[201]:
 
 
 # Train Logistic Regression model
@@ -394,7 +660,8 @@ lr_model.fit(X_resampled_scaled, y_resampled)
 
 # Train SVM model  
 print("Training SVM model...")
-svm_model = SVC(kernel='rbf', random_state=42, probability=True)
+
+svm_model = SVC(kernel='linear', random_state=42, probability=True)
 svm_model.fit(X_resampled_scaled, y_resampled)
 
 # Train XGBoost model
@@ -422,9 +689,9 @@ rf_model.fit(X_train_cleaned, y_train)
 print("Model training completed!")
 
 
-# ## **Phase 7: Model Evaluation**
+# ## **Phase 8: Model Evaluation**
 
-# In[57]:
+# In[202]:
 
 
 # Make predictions
@@ -435,7 +702,7 @@ y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back
 y_pred_rf = rf_model.predict(X_test_cleaned)
 
 
-# In[ ]:
+# In[203]:
 
 
 # Evaluation function for cleaner code
@@ -483,11 +750,11 @@ models_to_evaluate = [lr_results, svm_results, xgb_results, rf_results]
 for model_result in models_to_evaluate:
     print(f"\n{model_result['Model'].upper()}")
     print("-" * 40)
-    print(f"Accuracy:  {model_result['Accuracy']:.4f}")
-    print(f"Precision: {model_result['Precision']:.4f}")
     print(f"Recall:    {model_result['Recall']:.4f}")
-    print(f"F1 Score:  {model_result['F1 Score']:.4f}")
-    print(f"ROC AUC:   {model_result['ROC AUC']:.4f}")
+    # print(f"Accuracy:  {model_result['Accuracy']:.4f}")
+    # print(f"Precision: {model_result['Precision']:.4f}")
+    # print(f"F1 Score:  {model_result['F1 Score']:.4f}")
+    # print(f"ROC AUC:   {model_result['ROC AUC']:.4f}")
 
     # Get predictions for classification report
     if model_result['Model'] == "Logistic Regression":
@@ -503,7 +770,7 @@ for model_result in models_to_evaluate:
     print(classification_report(y_test, y_pred_for_report))
 
 
-# In[63]:
+# In[204]:
 
 
 # Model comparison summary
@@ -528,7 +795,7 @@ comparison_df = pd.DataFrame(comparison_data,
 print(comparison_df.round(4))
 
 
-# In[65]:
+# In[205]:
 
 
 # Find best performing model
