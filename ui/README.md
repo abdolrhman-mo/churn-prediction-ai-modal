@@ -41,6 +41,7 @@ The `data_manager.py` provides comprehensive functionality:
 - **Model Training**: SVM training with SMOTE balancing and threshold optimization
 - **Model Persistence**: Save/load trained models and components
 - **Prediction**: Make churn predictions on new customer data
+- **Smart Loading**: Automatically uses saved models from `models/` folder for fast loading
 
 ### Key Classes
 
@@ -74,9 +75,23 @@ The `data_manager.py` provides comprehensive functionality:
 ## 🚀 Running the Dashboard
 
 1. **Install Dependencies**: Ensure all required packages are installed
-2. **Run Main App**: Execute `python ui/main_app.py` or use Streamlit
-3. **Navigate**: Use the sidebar to switch between analysis and technical pages
-4. **Explore**: Interact with charts and explore the complete ML pipeline
+2. **Save Models First** (recommended): Run `python save_models.py` to check/save models
+3. **Run Main App**: Execute `python ui/main_app.py` or use Streamlit
+4. **Navigate**: Use the sidebar to switch between analysis and technical pages
+5. **Explore**: Interact with charts and explore the complete ML pipeline
+
+### 💾 Using Saved Models
+
+The dashboard automatically checks for saved models in the `models/` folder:
+- **Fast Loading**: No need to retrain every time
+- **Consistent Results**: Same model performance across sessions
+- **Production Ready**: Models can be deployed without retraining
+
+**Required Files:**
+- `models/svm_model.pkl` - Trained SVM classifier
+- `models/scaler.pkl` - Feature scaler
+- `models/preprocessing.pkl` - Preprocessing pipeline
+- `models/svm_threshold.txt` - Optimal threshold
 
 ## 🔧 Customization
 

@@ -75,7 +75,7 @@ for threshold in thresholds:
         ''', language='python')
     
     with tab4:
-        st.markdown("#### Model Persistence")
+        st.markdown("#### Model Persistence & Loading")
         st.code('''
 # Save the trained model
 joblib.dump(svm_model, "models/svm_model.pkl")
@@ -85,7 +85,31 @@ joblib.dump(processing, "models/preprocessing.pkl")
 # Save optimal threshold
 with open("models/svm_threshold.txt", 'w') as f:
     f.write(str(best_threshold))
+
+# Load saved models (faster than training)
+manager = ChurnDataManager()
+if manager.load_saved_model():
+    print("✅ Using saved model - Fast loading!")
+else:
+    print("⚠️ No saved model found")
         ''', language='python')
+        
+        # Add information about saved models
+        st.markdown("#### 💾 Saved Models in models/ Folder")
+        st.markdown("""
+        The dashboard now automatically checks for saved models in the `models/` folder:
+        
+        - **`svm_model.pkl`**: Trained SVM classifier
+        - **`scaler.pkl`**: StandardScaler for feature normalization
+        - **`preprocessing.pkl`**: Complete preprocessing pipeline
+        - **`svm_threshold.txt`**: Optimal threshold for maximum recall
+        
+        **Benefits:**
+        - ⚡ **Fast loading**: No need to retrain every time
+        - 🔄 **Consistent results**: Same model performance across sessions
+        - 💾 **Production ready**: Models can be deployed without retraining
+        - 📊 **Demo predictions**: Generated automatically from saved models
+        """)
     
     with tab5:
         st.markdown("#### 📋 Complete Project Phases Overview")

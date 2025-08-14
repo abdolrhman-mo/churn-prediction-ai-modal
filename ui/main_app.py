@@ -75,13 +75,25 @@ page = st.sidebar.radio("Choose Section:", [
     "⚙️ Technical Implementation"
 ])
 
-# Load data and train model
-with st.spinner("🔄 Loading data and training SVM model..."):
+# Load data and model
+with st.spinner("🔄 Loading data and checking for saved models..."):
     df = load_and_process_data()
-    svm_model, scaler, processing, threshold_results, svm_probs, y_test, X_test_scaled = train_svm_model(df)
+    try:
+        # Try to load saved model first
+        svm_model, scaler, processing, threshold_results, svm_probs, y_test, X_test_scaled = train_svm_model(df)
+        st.success("✅ Using saved model from models/ folder - Fast loading!")
+    except Exception as e:
+        st.warning("⚠️ No saved model found. Training new model...")
+        svm_model, scaler, processing, threshold_results, svm_probs, y_test, X_test_scaled = train_svm_model(df)
 
 # Convert results to DataFrame
 results_df = pd.DataFrame(threshold_results)
+
+# Show model status
+if 'svm_model' in locals() and svm_model is not None:
+    st.sidebar.success("🎯 Model Ready")
+    st.sidebar.info(f"Best Threshold: {results_df.loc[results_df['Recall'].idxmax(), 'Threshold']:.2f}")
+    st.sidebar.info(f"Max Recall: {results_df['Recall'].max():.3f}")
 
 # Page routing
 if page == "📊 SVM Threshold Analysis":

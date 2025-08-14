@@ -73,6 +73,17 @@ class ChurnDataManager:
         
         return df
     
+    def load_or_train_model(self):
+        """Try to load saved model first, fall back to training if not available"""
+        print("🔍 Checking for saved models...")
+        
+        if self.load_saved_model():
+            print("✅ Using saved model from models/ folder")
+            return self._get_training_results()
+        else:
+            print("⚠️ No saved model found. Training new model...")
+            return self.train_svm_model()
+    
     def train_svm_model(self):
         """Train SVM model following the exact pipeline and find optimal threshold"""
         if self.df is None:
@@ -167,6 +178,12 @@ class ChurnDataManager:
     
     def _get_training_results(self):
         """Return all training results for the main app"""
+        # If we have saved model but no test data, generate demo predictions
+        if (self.svm_model is not None and 
+            self.threshold_results is None and 
+            self.df is not None):
+            self._generate_demo_predictions()
+        
         return (
             self.svm_model, 
             self.scaler, 
@@ -176,6 +193,49 @@ class ChurnDataManager:
             self.y_test, 
             self.X_test_scaled
         )
+    
+    def _generate_demo_predictions(self):
+        """Generate demo predictions when using saved models"""
+        print("🔄 Generating demo predictions for saved model...")
+        
+        # Use a small sample of the data for demo predictions
+        sample_size = min(1000, len(self.df))
+        sample_df = self.df.sample(n=sample_size, random_state=42)
+        
+        X_sample = sample_df.drop('Churn', axis=1)
+        y_sample = sample_df['Churn']
+        
+        # Process the sample data
+        X_sample_cleaned = self.processing.transform(X_sample)
+        X_sample_scaled = self.scaler.transform(X_sample_cleaned)
+        
+        # Get predictions
+        self.svm_probs = self.svm_model.predict_proba(X_sample_scaled)[:, 1]
+        self.y_test = y_sample
+        self.X_test_scaled = X_sample_scaled
+        
+        # Generate threshold results
+        thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        
+        self.threshold_results = []
+        for threshold in thresholds:
+            predictions = (self.svm_probs >= threshold).astype(int)
+            pred_labels = ['Yes' if pred == 1 else 'No' for pred in predictions]
+            
+            recall = recall_score(y_sample, pred_labels, pos_label='Yes')
+            precision = precision_score(y_sample, pred_labels, pos_label='Yes')
+            f1 = f1_score(y_sample, pred_labels, pos_label='Yes')
+            accuracy = accuracy_score(y_sample, pred_labels)
+            
+            self.threshold_results.append({
+                'Threshold': threshold,
+                'Recall': recall,
+                'Precision': precision,
+                'F1_Score': f1,
+                'Accuracy': accuracy
+            })
+        
+        print("✅ Demo predictions generated successfully!")
     
     def get_best_threshold(self):
         """Get the threshold that achieves maximum recall"""
@@ -297,7 +357,16 @@ def load_and_process_data(data_path="data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
     return manager.load_and_process_data()
 
 def train_svm_model(df):
-    """Convenience function to train SVM model"""
+    """Convenience function to train SVM model (now tries to load saved model first)"""
     manager = ChurnDataManager()
     manager.df = df
-    return manager.train_svm_model()
+    return manager.load_or_train_model()
+
+def load_saved_model_only(df):
+    """Convenience function to only load saved model (no training fallback)"""
+    manager = ChurnDataManager()
+    manager.df = df
+    if manager.load_saved_model():
+        return manager._get_training_results()
+    else:
+        raise FileNotFoundError("No saved model found in models/ folder")
