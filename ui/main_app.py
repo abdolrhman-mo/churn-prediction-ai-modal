@@ -12,7 +12,7 @@ apply_custom_css()
 
 # Configure the page
 st.set_page_config(
-    page_title="🔮 Churn Prediction Dashboard",
+    page_title="Churn Prediction Dashboard",
     page_icon="🔮",
     layout="wide",
     initial_sidebar_state="expanded"
