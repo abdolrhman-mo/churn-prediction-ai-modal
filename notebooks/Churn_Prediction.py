@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[208]:
+# In[1]:
 
 
 import pandas as pd
@@ -28,7 +28,7 @@ from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-# In[209]:
+# In[2]:
 
 
 # Load dataset
@@ -38,14 +38,14 @@ df = pd.read_csv("../data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 df.head()
 
 
-# In[210]:
+# In[3]:
 
 
 # See how many rows and columns
 df.shape
 
 
-# In[211]:
+# In[4]:
 
 
 # See column names and types
@@ -59,21 +59,21 @@ df.info()
 
 # ## **Phase 2: Data Quality Assessment**
 
-# In[212]:
+# In[5]:
 
 
 #  Count missing values in each column
 df.isnull().sum()
 
 
-# In[213]:
+# In[6]:
 
 
 # Check for duplicate customers
 df.duplicated().sum()
 
 
-# In[214]:
+# In[7]:
 
 
 # See current data types
@@ -85,7 +85,7 @@ df.dtypes
 
 # ## **Phase 3: Data Cleaning**
 
-# In[215]:
+# In[8]:
 
 
 # Convert 'TotalCharges' to numeric, some rows may be blank
@@ -102,7 +102,7 @@ df = df.dropna()
 df.shape
 
 
-# In[216]:
+# In[9]:
 
 
 df.dtypes
@@ -110,7 +110,7 @@ df.dtypes
 
 # ## **Phase 4: Feature Engineering**
 
-# In[217]:
+# In[10]:
 
 
 # # CHUNK 1: Basic Data Exploration
@@ -133,7 +133,7 @@ df.dtypes
 # print(df.head(3))
 
 
-# In[218]:
+# In[11]:
 
 
 # # CHUNK 2: Find What Drives Churn
@@ -158,7 +158,7 @@ df.dtypes
 #             print(f"🚨 HIGH RISK categories in {col}: {high_risk[high_risk].index.tolist()}")
 
 
-# In[219]:
+# In[12]:
 
 
 # # CHUNK 3: See How Money Affects Churn
@@ -207,7 +207,7 @@ df.dtypes
 #             print(f"💡 FEATURE IDEA: Create 'low_{col.lower()}' flag for values < {churned_avg:.0f}")
 
 
-# In[220]:
+# In[13]:
 
 
 # # CHUNK 4: Create Your First Feature - Service Count
@@ -269,7 +269,7 @@ df.dtypes
 #     print("❌ Theory not confirmed - investigate further")
 
 
-# In[221]:
+# In[14]:
 
 
 # # CHUNK 5: Create Risk Profile Feature
@@ -326,7 +326,7 @@ df.dtypes
 #     print("⚠️ Weak feature - try different combinations.")
 
 
-# In[222]:
+# In[15]:
 
 
 # # CHUNK 6: Create Value Perception Features
@@ -400,7 +400,7 @@ df.dtypes
 #         print("❌ Hypothesis not confirmed")
 
 
-# In[223]:
+# In[16]:
 
 
 # # ## **Phase 4: Feature Engineering**
@@ -477,7 +477,7 @@ df.dtypes
 
 # ## **Phase 5: Data Visualization & Exploration**
 
-# In[224]:
+# In[17]:
 
 
 # Plot churn count
@@ -495,14 +495,14 @@ plt.title("Churn by Contract Type")
 
 # ## **Phase 6: Data Preprocessing**
 
-# In[225]:
+# In[18]:
 
 
 # Drop customerID (not useful)
 df.drop(['customerID'], axis=1, inplace=True)
 
 
-# In[226]:
+# In[19]:
 
 
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -512,7 +512,7 @@ print(num_cols)
 print(categorical_cols)
 
 
-# In[227]:
+# In[20]:
 
 
 # Dynamic column classification based on data types and unique values
@@ -537,7 +537,7 @@ print("Binary columns (2 unique values):", binary_cols)
 print("One-hot columns (>2 unique values):", onehot_cols)
 
 
-# In[228]:
+# In[21]:
 
 
 # Numerical pipeline
@@ -567,7 +567,7 @@ processing = ColumnTransformer([
 processing
 
 
-# In[229]:
+# In[22]:
 
 
 # Separate What You Want to Predict
@@ -593,7 +593,7 @@ y_train_encoded = label_encoder.fit_transform(y_train)
 y_test_encoded = label_encoder.transform(y_test)
 
 
-# In[230]:
+# In[23]:
 
 
 # Test if data is preprocessed
@@ -604,7 +604,7 @@ print("Processed shape:", X_train_cleaned.shape)
 # Example: Original (7000, 20) → Processed (7000, 45)
 
 
-# In[231]:
+# In[24]:
 
 
 # Another way to test if data is preprocessed
@@ -621,7 +621,7 @@ except ValueError as e:
     print(f"❌ Pipeline failed: {e}")
 
 
-# In[232]:
+# In[25]:
 
 
 # Check if your data is imbalanced
@@ -631,7 +631,7 @@ print("\nPercentages:")
 print(y_train.value_counts(normalize=True) * 100)
 
 
-# In[233]:
+# In[26]:
 
 
 # Resampling because the data is imbalanced
@@ -650,7 +650,7 @@ X_test_scaled = scaler.transform(X_test_cleaned)
 
 # ## **Phase 7: Model Training**
 
-# In[234]:
+# In[27]:
 
 
 # Train Logistic Regression model
@@ -701,365 +701,173 @@ print("Model training completed!")
 
 # ## **Phase 8: Model Evaluation**
 
-# In[ ]:
+# In[28]:
 
 
 # Make predictions
 y_pred_lr = lr_model.predict(X_test_scaled)
-
-# SVM predictions
 y_pred_svm = svm_model.predict(X_test_scaled)
-
-# XGBoost predictions
 y_pred_xgb_encoded = xgb_model.predict(X_test_cleaned)
 y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back to 'Yes'/'No'
-
-# Random Forest predictions
 y_pred_rf = rf_model.predict(X_test_cleaned)
-
-# Voting predictions
 y_pred_voting = voting_model.predict(X_test_scaled)
 
 
-# In[246]:
+# In[29]:
 
 
-# Refactored Phase 8: Model Evaluation with Clean, Reusable Code
+# Evaluation function for cleaner code
+def evaluate_model(model, y_true, y_pred, model_name, X_test_data, use_encoded=False):
+    """Evaluate a single model and return metrics"""
 
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
+    # Basic metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, pos_label='Yes')
+    recall = recall_score(y_true, y_pred, pos_label='Yes')
+    f1 = f1_score(y_true, y_pred, pos_label='Yes')
 
-def get_model_predictions(model, X_test_data, use_encoded=False):
-    """Get predictions and probabilities from a model"""
-    try:
-        predictions = model.predict(X_test_data)
-        probabilities = model.predict_proba(X_test_data)[:, 1]
-        return predictions, probabilities
-    except Exception as e:
-        print(f"Error getting predictions: {e}")
-        return None, None
+    # ROC AUC (handle different data formats)
+    if use_encoded:
+        # For XGBoost and Random Forest (using encoded test data)
+        y_true_encoded = label_encoder.transform(y_true)
+        roc_auc = roc_auc_score(y_true_encoded, model.predict_proba(X_test_data)[:,1])
+    else:
+        # For Logistic Regression and SVM (using scaled test data)
+        roc_auc = roc_auc_score(y_true, model.predict_proba(X_test_data)[:,1])
 
-def calculate_metrics(y_true, y_pred, probabilities=None):
-    """Calculate all evaluation metrics for a model"""
-    try:
-        metrics = {
-            'accuracy': accuracy_score(y_true, y_pred),
-            'precision': precision_score(y_true, y_pred, pos_label='Yes'),
-            'recall': recall_score(y_true, y_pred, pos_label='Yes'),
-            'f1': f1_score(y_true, y_pred, pos_label='Yes')
-        }
-        
-        # Add ROC AUC if probabilities are available
-        if probabilities is not None:
-            try:
-                # Handle encoded vs non-encoded labels
-                if y_true.iloc[0] in ['Yes', 'No']:
-                    # Convert to binary for ROC AUC
-                    y_binary = (y_true == 'Yes').astype(int)
-                else:
-                    y_binary = y_true
-                metrics['roc_auc'] = roc_auc_score(y_binary, probabilities)
-            except:
-                metrics['roc_auc'] = None
-        
-        return metrics
-    except Exception as e:
-        print(f"Error calculating metrics: {e}")
-        return None
-
-def find_optimal_threshold(probabilities, y_true, model_name):
-    """Find the optimal threshold for a model based on recall"""
-    print(f"\n🔍 {model_name.upper()} - Threshold Analysis")
-    print("-" * 60)
-    
-    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    results = []
-    
-    print("Threshold | Recall  | Precision | F1-Score | Meaning")
-    print("-" * 65)
-    
-    for threshold in thresholds:
-        # Apply threshold
-        predictions = (probabilities >= threshold).astype(int)
-        pred_labels = ['Yes' if pred == 1 else 'No' for pred in predictions]
-        
-        # Calculate metrics
-        recall = recall_score(y_true, pred_labels, pos_label='Yes')
-        precision = precision_score(y_true, pred_labels, pos_label='Yes')
-        f1 = f1_score(y_true, pred_labels, pos_label='Yes')
-        
-        # Explanation
-        if threshold <= 0.2:
-            meaning = "Extremely aggressive"
-        elif threshold <= 0.4:
-            meaning = "Very aggressive"
-        elif threshold == 0.5:
-            meaning = "Default (balanced)"
-        elif threshold <= 0.7:
-            meaning = "Conservative"
-        else:
-            meaning = "Very conservative"
-        
-        print(f"{threshold:^9} | {recall:.4f}  | {precision:.4f}    | {f1:.4f}   | {meaning}")
-        results.append((threshold, recall, precision, f1))
-    
-    # Find best threshold based on recall
-    best_recall_idx = max(range(len(results)), key=lambda i: results[i][1])
-    best_threshold, best_recall, best_precision, best_f1 = results[best_recall_idx]
-    
-    print(f"\n🏆 BEST RECALL for {model_name}:")
-    print(f"   Threshold: {best_threshold}")
-    print(f"   Recall: {best_recall:.4f}")
-    print(f"   Precision: {best_precision:.4f}")
-    print(f"   F1-Score: {best_f1:.4f}")
-    
-    return best_threshold, best_recall, best_precision, best_f1
-
-def evaluate_model_comprehensive(model, X_test_data, y_test, model_name, use_encoded=False):
-    """Comprehensive evaluation of a single model"""
-    print(f"\n{'='*60}")
-    print(f"📊 {model_name.upper()} - COMPREHENSIVE EVALUATION")
-    print(f"{'='*60}")
-    
-    # Get predictions and probabilities
-    predictions, probabilities = get_model_predictions(model, X_test_data, use_encoded)
-    
-    if predictions is None:
-        print(f"❌ Failed to get predictions for {model_name}")
-        return None
-    
-    # Calculate basic metrics
-    metrics = calculate_metrics(y_test, predictions, probabilities)
-    
-    if metrics is None:
-        print(f"❌ Failed to calculate metrics for {model_name}")
-        return None
-    
-    # Display metrics
-    print(f"📈 Performance Metrics:")
-    print(f"   Accuracy:  {metrics['accuracy']:.4f}")
-    print(f"   Precision: {metrics['precision']:.4f}")
-    print(f"   Recall:    {metrics['recall']:.4f}")
-    print(f"   F1 Score:  {metrics['f1']:.4f}")
-    if metrics['roc_auc'] is not None:
-        print(f"   ROC AUC:   {metrics['roc_auc']:.4f}")
-    
-    # Find optimal threshold
-    if probabilities is not None:
-        threshold_results = find_optimal_threshold(probabilities, y_test, model_name)
-        metrics['optimal_threshold'] = threshold_results[0]
-        metrics['optimal_recall'] = threshold_results[1]
-        metrics['optimal_precision'] = threshold_results[2]
-        metrics['optimal_f1'] = threshold_results[3]
-    
-    # Classification report
-    print(f"\n📋 Classification Report:")
-    print(classification_report(y_test, predictions))
-    
-    return metrics
-
-def compare_all_models(models_config):
-    """Compare all models and find the best performer"""
-    print(f"\n{'='*80}")
-    print("🏆 COMPREHENSIVE MODEL COMPARISON")
-    print(f"{'='*80}")
-    
-    all_results = []
-    
-    for model_name, config in models_config.items():
-        print(f"\n{'='*60}")
-        print(f"Evaluating {model_name}...")
-        
-        results = evaluate_model_comprehensive(
-            config['model'], 
-            config['X_test'], 
-            config['y_test'], 
-            model_name, 
-            config['use_encoded']
-        )
-        
-        if results:
-            results['model_name'] = model_name
-            all_results.append(results)
-    
-    # Create comparison summary
-    if all_results:
-        print(f"\n{'='*80}")
-        print("📊 MODEL COMPARISON SUMMARY")
-        print(f"{'='*80}")
-        
-        # Create comparison DataFrame
-        comparison_data = []
-        for result in all_results:
-            comparison_data.append([
-                result['model_name'],
-                result['accuracy'],
-                result['precision'],
-                result['recall'],
-                result['f1'],
-                result.get('roc_auc', 'N/A'),
-                result.get('optimal_threshold', 'N/A')
-            ])
-        
-        comparison_df = pd.DataFrame(comparison_data, 
-                                   columns=['Model', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 'Optimal Threshold'])
-        print(comparison_df.round(4))
-        
-        # Find best models by different metrics
-        best_f1_idx = comparison_df['F1 Score'].idxmax()
-        best_recall_idx = comparison_df['Recall'].idxmax()
-        best_accuracy_idx = comparison_df['Accuracy'].idxmax()
-        
-        print(f"\n🥇 BEST PERFORMING MODELS:")
-        print(f"   Best F1 Score: {comparison_df.loc[best_f1_idx, 'Model']} ({comparison_df.loc[best_f1_idx, 'F1 Score']:.4f})")
-        print(f"   Best Recall: {comparison_df.loc[best_recall_idx, 'Model']} ({comparison_df.loc[best_recall_idx, 'Recall']:.4f})")
-        print(f"   Best Accuracy: {comparison_df.loc[best_accuracy_idx, 'Model']} ({comparison_df.loc[best_accuracy_idx, 'Accuracy']:.4f})")
-        
-        return comparison_df, all_results
-    
-    return None, None
-
-def demonstrate_predictions(models_config, sample_idx=0):
-    """Demonstrate predictions for a sample customer"""
-    print(f"\n{'='*80}")
-    print("🔮 SAMPLE PREDICTION DEMONSTRATION")
-    print(f"{'='*80}")
-    
-    # Get sample customer
-    sample_original = models_config[list(models_config.keys())[0]]['X_test'].iloc[sample_idx]
-    sample_actual = models_config[list(models_config.keys())[0]]['y_test'].iloc[sample_idx]
-    
-    print(f"Customer Sample (Test Customer #{sample_idx + 1}):")
-    print(f"  - Contract: {sample_original.get('Contract', 'N/A')}")
-    print(f"  - Monthly Charges: ${sample_original.get('MonthlyCharges', 'N/A'):.2f}")
-    print(f"  - Tenure: {sample_original.get('tenure', 'N/A')} months")
-    print(f"  - Internet Service: {sample_original.get('InternetService', 'N/A')}")
-    print(f"  - Actual Churn: {sample_actual}")
-    
-    # Get predictions from all models
-    print(f"\n📊 Predictions from All Models:")
-    print("-" * 50)
-    
-    for model_name, config in models_config.items():
-        predictions, probabilities = get_model_predictions(config['model'], config['X_test'], config['use_encoded'])
-        
-        if predictions is not None and probabilities is not None:
-            pred_label = predictions[sample_idx]
-            prob = probabilities[sample_idx]
-            
-            print(f"  {model_name}:")
-            print(f"    Prediction: {pred_label}")
-            print(f"    Churn Probability: {prob:.3f}")
-            print(f"    Stay Probability: {1-prob:.3f}")
-            print()
-
-def generate_business_recommendations(comparison_df, all_results):
-    """Generate business recommendations based on model performance"""
-    print(f"\n{'='*80}")
-    print("💡 BUSINESS RECOMMENDATIONS & INSIGHTS")
-    print(f"{'='*80}")
-    
-    if comparison_df is None or all_results is None:
-        print("❌ No results available for recommendations")
-        return
-    
-    # Find best overall model
-    best_f1_idx = comparison_df['F1 Score'].idxmax()
-    best_model = comparison_df.loc[best_f1_idx, 'Model']
-    best_f1 = comparison_df.loc[best_f1_idx, 'F1 Score']
-    
-    print(f"🎯 RECOMMENDED PRODUCTION MODEL:")
-    print(f"   {best_model} with F1 Score: {best_f1:.4f}")
-    
-    # Performance analysis
-    print(f"\n📈 PERFORMANCE ANALYSIS:")
-    print(f"   Overall accuracy range: {comparison_df['Accuracy'].min():.1%} - {comparison_df['Accuracy'].max():.1%}")
-    print(f"   Best F1 Score: {best_f1:.4f} ({best_model})")
-    print(f"   Performance level: {'Excellent' if best_f1 > 0.8 else 'Good' if best_f1 > 0.7 else 'Moderate' if best_f1 > 0.6 else 'Needs Improvement'}")
-    
-    # Threshold strategy recommendations
-    print(f"\n🎯 THRESHOLD STRATEGY RECOMMENDATIONS:")
-    
-    # Find best threshold results
-    best_threshold_results = None
-    for result in all_results:
-        if result['model_name'] == best_model and 'optimal_threshold' in result:
-            best_threshold_results = result
-            break
-    
-    if best_threshold_results:
-        optimal_threshold = best_threshold_results['optimal_threshold']
-        optimal_recall = best_threshold_results['optimal_recall']
-        
-        print(f"   Optimal threshold for {best_model}: {optimal_threshold:.1f}")
-        print(f"   This threshold achieves {optimal_recall:.1%} recall")
-        
-        if optimal_threshold <= 0.3:
-            print("   Strategy: Aggressive retention - contact many customers")
-            print("   Use when: Cost of missing churners is very high")
-        elif optimal_threshold <= 0.6:
-            print("   Strategy: Balanced approach - targeted retention")
-            print("   Use when: Moderate retention budget available")
-        else:
-            print("   Strategy: Conservative retention - focus on high-confidence cases")
-            print("   Use when: Retention resources are limited")
-    
-    print(f"\n🚀 IMPLEMENTATION RECOMMENDATIONS:")
-    print("1. Deploy the best performing model for production use")
-    print("2. Use the optimal threshold for maximum recall")
-    print("3. Monitor model performance over time")
-    print("4. Implement targeted retention strategies based on predictions")
-    print("5. Set up automated alerts for high-risk customers")
-
-# =============================================================================
-# MAIN EVALUATION EXECUTION
-# =============================================================================
-
-# Configure all models for evaluation
-models_config = {
-    'Logistic Regression': {
-        'model': lr_model,
-        'X_test': X_test_scaled,
-        'y_test': y_test,
-        'use_encoded': False
-    },
-    'SVM': {
-        'model': svm_model,
-        'X_test': X_test_scaled,
-        'y_test': y_test,
-        'use_encoded': False
-    },
-    'XGBoost': {
-        'model': xgb_model,
-        'X_test': X_test_cleaned,
-        'y_test': y_test,
-        'use_encoded': True
-    },
-    'Random Forest': {
-        'model': rf_model,
-        'X_test': X_test_cleaned,
-        'y_test': y_test,
-        'use_encoded': True
-    },
-    'Voting Classifier': {
-        'model': voting_model,
-        'X_test': X_test_scaled,
-        'y_test': y_test,
-        'use_encoded': False
+    return {
+        'Model': model_name,
+        'Accuracy': accuracy,
+        'Precision': precision,
+        'Recall': recall,
+        'F1 Score': f1,
+        'ROC AUC': roc_auc
     }
-}
 
-# Execute comprehensive evaluation
-print("🚀 Starting comprehensive model evaluation...")
-comparison_df, all_results = compare_all_models(models_config)
+# Evaluate all models
+print("\n" + "="*60)
+print("📊 MODEL EVALUATION RESULTS")
+print("="*60)
 
-# Demonstrate predictions
-demonstrate_predictions(models_config)
+# Evaluate each model
+lr_results = evaluate_model(lr_model, y_test, y_pred_lr, "Logistic Regression", X_test_scaled, use_encoded=False)
+svm_results = evaluate_model(svm_model, y_test, y_pred_svm, "SVM", X_test_scaled, use_encoded=False)
+xgb_results = evaluate_model(xgb_model, y_test, y_pred_xgb, "XGBoost", X_test_cleaned, use_encoded=True)
+rf_results = evaluate_model(rf_model, y_test, y_pred_rf, "Random Forest", X_test_cleaned, use_encoded=True)
+voting_results = evaluate_model(voting_model, y_test, y_pred_voting, "Voting Classifier", X_test_scaled, use_encoded=False)
 
-# Generate business recommendations
-generate_business_recommendations(comparison_df, all_results)
+# Display detailed results for each model
+models_to_evaluate = [lr_results, svm_results, xgb_results, rf_results, voting_results]
 
-print("\n✅ Phase 8: Model Evaluation completed successfully!")
-print("💡 All models have been evaluated with comprehensive metrics and business insights")
+for model_result in models_to_evaluate:
+    print(f"\n{model_result['Model'].upper()}")
+    print("-" * 40)
+    print(f"Recall:    {model_result['Recall']:.4f}")
+    # print(f"Accuracy:  {model_result['Accuracy']:.4f}")
+    # print(f"Precision: {model_result['Precision']:.4f}")
+    # print(f"F1 Score:  {model_result['F1 Score']:.4f}")
+    # print(f"ROC AUC:   {model_result['ROC AUC']:.4f}")
+
+    # Get predictions for classification report
+    if model_result['Model'] == "Logistic Regression":
+        y_pred_for_report = y_pred_lr
+    elif model_result['Model'] == "SVM":
+        y_pred_for_report = y_pred_svm
+    elif model_result['Model'] == "XGBoost":
+        y_pred_for_report = y_pred_xgb
+    else:  # Random Forest
+        y_pred_for_report = y_pred_rf
+
+    print(f"\nClassification Report:")
+    print(classification_report(y_test, y_pred_for_report))
+
+
+# In[30]:
+
+
+# Model comparison summary
+print("\n" + "="*60)
+print("🏆 MODEL COMPARISON SUMMARY")
+print("="*60)
+
+# Create comparison DataFrame
+comparison_data = []
+for model_result in models_to_evaluate:
+    comparison_data.append([
+        model_result['Model'],
+        model_result['Accuracy'],
+        model_result['Precision'],
+        model_result['Recall'],
+        model_result['F1 Score'],
+        model_result['ROC AUC']
+    ])
+
+comparison_df = pd.DataFrame(comparison_data, 
+                           columns=['Model', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC'])
+print(comparison_df.round(4))
+
+
+# In[34]:
+
+
+# Find best performing model
+best_model_idx = comparison_df['F1 Score'].idxmax()
+best_model_name = comparison_df.loc[best_model_idx, 'Model']
+best_f1_score = comparison_df.loc[best_model_idx, 'F1 Score']
+
+print(f"\n🥇 BEST PERFORMING MODEL:")
+print(f"   {best_model_name} with F1 Score: {best_f1_score:.4f}")
+
+
+# ## **Phase 9: Model Optimization**
+
+# In[37]:
+
+
+# Simple SVM threshold optimization
+print("\n" + "="*60)
+print("🎯 SVM THRESHOLD OPTIMIZATION - FINDING BEST RECALL")
+print("="*60)
+
+# Get SVM probabilities (using the same data format as your existing code)
+svm_probs = svm_model.predict_proba(X_test_scaled)[:, 1]
+
+# Test different thresholds and find best recall
+thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+best_recall = 0
+best_threshold = 0.5
+best_metrics = {}
+
+print("Threshold | Recall  | Precision | F1-Score")
+print("-" * 45)
+
+for threshold in thresholds:
+    # Apply threshold
+    predictions = (svm_probs >= threshold).astype(int)
+    pred_labels = ['Yes' if pred == 1 else 'No' for pred in predictions]
+
+    # Calculate metrics
+    recall = recall_score(y_test, pred_labels, pos_label='Yes')
+    precision = precision_score(y_test, pred_labels, pos_label='Yes')
+    f1 = f1_score(y_test, pred_labels, pos_label='Yes')
+
+    print(f"{threshold:^9} | {recall:.4f}  | {precision:.4f}    | {f1:.4f}")
+
+    # Track best recall
+    if recall > best_recall:
+        best_recall = recall
+        best_threshold = threshold
+        best_metrics = {'recall': recall, 'precision': precision, 'f1': f1}
+
+print(f"\n🏆 BEST SVM THRESHOLD: {best_threshold}")
+print(f"   Recall: {best_metrics['recall']:.4f}")
+print(f"   Precision: {best_metrics['precision']:.4f}")
+print(f"   F1-Score: {best_metrics['f1']:.4f}")
+
+# Show high-risk customers
+high_risk_count = (svm_probs >= best_threshold).sum()
+print(f"\n🔴 HIGH-RISK CUSTOMERS (Probability >= {best_threshold}): {high_risk_count}")
+
+print("✅ SVM threshold optimization completed!")
+print(f"💡 Use threshold {best_threshold} for production deployment")
 

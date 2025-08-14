@@ -195,7 +195,7 @@ df.shape
 
 ---
 
-## 🎯 **Phase 9: Model Optimization** (Optional)
+## 🎯 **Phase 9: Model Optimization**
 
 ### What this means:
 - Fine-tune your model to get better predictions
