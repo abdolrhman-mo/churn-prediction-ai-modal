@@ -24,7 +24,7 @@ st.markdown("### Predict customer churn and discover insights to improve retenti
 
 # Sidebar for navigation
 st.sidebar.title("📊 Navigation")
-page = st.sidebar.selectbox("Choose a page:", [
+page = st.sidebar.radio("Choose a page:", [
     "🏠 Home & Model Training",
     "🔍 Single Customer Prediction", 
     "📈 Data Insights",

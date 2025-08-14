@@ -877,7 +877,7 @@ print(f"💡 Use threshold {best_threshold} for production deployment")
 
 # ## **Saving the model**
 
-# In[ ]:
+# In[50]:
 
 
 # Save the optimized SVM model with best threshold
@@ -886,26 +886,27 @@ print("💾 SAVING OPTIMIZED SVM MODEL")
 print("="*60)
 
 # Create models directory if it doesn't exist
-os.makedirs("models", exist_ok=True)
+models_path = "../models"
+os.makedirs(models_path, exist_ok=True)
 
 # Save the SVM model
-svm_model_path = "../models/svm_model.pkl"
+svm_model_path = f"{models_path}/svm_model.pkl"
 joblib.dump(svm_model, svm_model_path)
 print(f"✅ SVM model saved to: {svm_model_path}")
 
 # Save the best threshold value
-threshold_path = "models/svm_threshold.txt"
+threshold_path = f"{models_path}/svm_threshold.txt"
 with open(threshold_path, 'w') as f:
     f.write(str(best_threshold))
 print(f"✅ Best threshold saved to: {threshold_path}")
 
 # Save the scaler for preprocessing new data
-scaler_path = "models/scaler.pkl"
+scaler_path = f"{models_path}/scaler.pkl"
 joblib.dump(scaler, scaler_path)
 print(f"✅ Scaler saved to: {scaler_path}")
 
 # Save the preprocessing pipeline
-processing_path = "models/preprocessing.pkl"
+processing_path = f"{models_path}/preprocessing.pkl"
 joblib.dump(processing, processing_path)
 print(f"✅ Preprocessing pipeline saved to: {processing_path}")
 
@@ -929,12 +930,12 @@ def load_and_predict_svm(customer_data):
     """
     try:
         # Load the saved components
-        svm_model = joblib.load("models/svm_model.pkl")
-        scaler = joblib.load("models/scaler.pkl")
-        processing = joblib.load("models/preprocessing.pkl")
+        svm_model = joblib.load(f"{models_path}/svm_model.pkl")
+        scaler = joblib.load(f"{models_path}/scaler.pkl")
+        processing = joblib.load(f"{models_path}/preprocessing.pkl")
 
         # Load the best threshold
-        with open("models/svm_threshold.txt", 'r') as f:
+        with open(f"{models_path}/svm_threshold.txt", 'r') as f:
             best_threshold = float(f.read().strip())
 
         print(f"✅ Model loaded successfully with threshold: {best_threshold}")
