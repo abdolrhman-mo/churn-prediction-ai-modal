@@ -191,8 +191,6 @@ def train_svm_model(df):
 st.sidebar.title("🎯 Navigation")
 page = st.sidebar.radio("Choose Section:", [
     "📊 SVM Threshold Analysis",
-    "🎯 Recall Optimization Results", 
-    "🔍 Model Performance Details",
     "⚙️ Technical Implementation"
 ])
 
@@ -281,129 +279,6 @@ if page == "📊 SVM Threshold Analysis":
     - This means **{(1-best_recall)*100:.1f}% missed churn rate** (very low!)
     """)
 
-elif page == "🎯 Recall Optimization Results":
-    st.markdown("## 🎯 Recall Optimization Results")
-    
-    # Best threshold highlight
-    best_threshold = results_df.loc[results_df['Recall'].idxmax()]
-    
-    st.markdown(f"""
-    <div class="threshold-box">
-    <h3>🏆 OPTIMAL THRESHOLD FOUND: {best_threshold['Threshold']}</h3>
-    <div style="display: flex; justify-content: space-around; margin-top: 1rem;">
-        <div><strong>Recall:</strong> {best_threshold['Recall']:.4f}</div>
-        <div><strong>Precision:</strong> {best_threshold['Precision']:.4f}</div>
-        <div><strong>F1 Score:</strong> {best_threshold['F1_Score']:.4f}</div>
-        <div><strong>Accuracy:</strong> {best_threshold['Accuracy']:.4f}</div>
-    </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Threshold comparison table
-    st.markdown("### 📊 Complete Threshold Analysis")
-    
-    # Format the dataframe for better display
-    display_df = results_df.copy()
-    display_df['Recall'] = display_df['Recall'].apply(lambda x: f"{x:.4f}")
-    display_df['Precision'] = display_df['Precision'].apply(lambda x: f"{x:.4f}")
-    display_df['F1_Score'] = display_df['F1_Score'].apply(lambda x: f"{x:.4f}")
-    display_df['Accuracy'] = display_df['Accuracy'].apply(lambda x: f"{x:.4f}")
-    
-    # Highlight best recall row
-    def highlight_max_recall(row):
-        if row['Threshold'] == best_threshold['Threshold']:
-            return ['background-color: #ffeb3b; font-weight: bold'] * len(row)
-        return [''] * len(row)
-    
-    st.dataframe(
-        display_df.style.apply(highlight_max_recall, axis=1),
-        use_container_width=True
-    )
-    
-    # Risk distribution
-    st.markdown("### 🔍 Customer Risk Distribution at Optimal Threshold")
-    
-    optimal_threshold = best_threshold['Threshold']
-    high_risk_customers = (svm_probs >= optimal_threshold).sum()
-    low_risk_customers = len(svm_probs) - high_risk_customers
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("High Risk Customers", high_risk_customers, 
-                 help=f"Customers with churn probability ≥ {optimal_threshold}")
-    with col2:
-        st.metric("Low Risk Customers", low_risk_customers,
-                 help=f"Customers with churn probability < {optimal_threshold}")
-    
-    # Risk distribution pie chart
-    fig = go.Figure(data=[go.Pie(
-        labels=['High Risk', 'Low Risk'],
-        values=[high_risk_customers, low_risk_customers],
-        colors=['#ff6b6b', '#4ecdc4']
-    )])
-    fig.update_layout(title=f"Customer Risk Distribution (Threshold: {optimal_threshold})")
-    st.plotly_chart(fig, use_container_width=True)
-
-elif page == "🔍 Model Performance Details":
-    st.markdown("## 🔍 Model Performance Details")
-    
-    # Confusion Matrix at optimal threshold
-    optimal_threshold = results_df.loc[results_df['Recall'].idxmax(), 'Threshold']
-    optimal_predictions = (svm_probs >= optimal_threshold).astype(int)
-    optimal_pred_labels = ['Yes' if pred == 1 else 'No' for pred in optimal_predictions]
-    
-    cm = confusion_matrix(y_test, optimal_pred_labels, labels=['No', 'Yes'])
-    
-    fig = px.imshow(cm, 
-                    text_auto=True,
-                    color_continuous_scale='Blues',
-                    labels=dict(x="Predicted", y="Actual"),
-                    x=['No Churn', 'Churn'],
-                    y=['No Churn', 'Churn'],
-                    title=f"Confusion Matrix (Threshold: {optimal_threshold})")
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Classification report
-    st.markdown("### 📊 Detailed Classification Report")
-    st.text(classification_report(y_test, optimal_pred_labels))
-    
-    # Probability distribution
-    st.markdown("### 📈 Churn Probability Distribution")
-    
-    # Create histogram of probabilities
-    fig = go.Figure()
-    
-    # Separate probabilities by actual class
-    churn_probs = svm_probs[np.array(y_test) == 'Yes']
-    no_churn_probs = svm_probs[np.array(y_test) == 'No']
-    
-    fig.add_trace(go.Histogram(
-        x=no_churn_probs,
-        name='Actual: No Churn',
-        opacity=0.7,
-        nbinsx=20
-    ))
-    
-    fig.add_trace(go.Histogram(
-        x=churn_probs,
-        name='Actual: Churn',
-        opacity=0.7,
-        nbinsx=20
-    ))
-    
-    # Add threshold line
-    fig.add_vline(x=optimal_threshold, line_dash="dash", line_color="red",
-                  annotation_text=f"Threshold: {optimal_threshold}")
-    
-    fig.update_layout(
-        title="Distribution of Churn Probabilities by Actual Class",
-        xaxis_title="Churn Probability",
-        yaxis_title="Count",
-        barmode='overlay'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
 elif page == "⚙️ Technical Implementation":
     st.markdown("## ⚙️ Technical Implementation")
     
@@ -421,7 +296,7 @@ elif page == "⚙️ Technical Implementation":
     # Code explanations
     st.markdown("### 📝 Key Code Components")
     
-    tab1, tab2, tab3, tab4 = st.tabs(["Data Processing", "Model Training", "Threshold Tuning", "Model Saving"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Data Processing", "Model Training", "Threshold Tuning", "Model Saving", "Project Phases"])
     
     with tab1:
         st.markdown("#### Data Loading & Preprocessing")
@@ -489,6 +364,57 @@ with open("models/svm_threshold.txt", 'w') as f:
     f.write(str(best_threshold))
         ''', language='python')
     
+    with tab5:
+        st.markdown("#### 📋 Complete Project Phases Overview")
+        st.markdown("""
+        **Phase 1: Data Loading & Initial Exploration**
+        - Load CSV file into pandas DataFrame
+        - Examine data shape, columns, and basic info
+        - Understand what data you're working with
+        
+        **Phase 2: Data Quality Assessment**
+        - Check for missing values, duplicates, wrong data types
+        - Identify imbalanced target (80% stayed, 20% churned)
+        - Find data problems that could break your model
+        
+        **Phase 3: Data Cleaning**
+        - Convert 'TotalCharges' from text to numeric
+        - Handle missing values and drop problematic rows
+        - Ensure data is ready for machine learning
+        
+        **Phase 4: Feature Engineering**
+        - Create new features from existing data
+        - Handle categorical variables (gender, contract type, services)
+        - Prepare features for model training
+        
+        **Phase 5: Data Visualization & Exploration**
+        - Create charts to understand churn patterns
+        - Identify which customer traits predict churn
+        - Generate business insights from data
+        
+        **Phase 6: Data Preprocessing**
+        - Remove useless columns (customerID)
+        - Convert text to numbers for ML algorithms
+        - Handle imbalanced data with SMOTE
+        - Scale numerical features
+        - Split data into training and testing sets
+        
+        **Phase 7: Model Training**
+        - Train multiple algorithms (Logistic Regression, SVM, XGBoost, Random Forest)
+        - Let algorithms learn patterns from customer data
+        - Create models that can predict churn
+        
+        **Phase 8: Model Evaluation**
+        - Test models on unseen data
+        - Calculate accuracy, precision, recall, F1-score
+        - Compare performance across different algorithms
+        
+        **Phase 9: Model Optimization**
+        - Fine-tune models for better performance
+        - Optimize thresholds for maximum recall
+        - Choose best model for deployment
+        """)
+    
     # Technical achievements
     st.markdown("### 🏆 Your Technical Achievements")
     
@@ -520,6 +446,30 @@ with open("models/svm_threshold.txt", 'w') as f:
         cat_cols.remove('Churn')  # Remove target
         for col in cat_cols:
             st.write(f"• {col}")
+    
+    # Success metrics
+    st.markdown("### 📊 Success Metrics & Project Goals")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🎯 Minimum Viable Model:**")
+        st.markdown("- **Accuracy > 80%**: Better than random guessing")
+        st.markdown("- **Recall > 70%**: Catch most customers who will churn")
+        st.markdown("- **Model runs without errors**: Technical success")
+    
+    with col2:
+        st.markdown("**💼 Business Success:**")
+        st.markdown("- **Actionable insights**: Which factors drive churn most?")
+        st.markdown("- **Cost savings**: Prevent customer loss through targeted retention")
+        st.markdown("- **ROI**: Model saves more money than it costs to develop")
+    
+    st.markdown("### 📁 Expected Project Outputs")
+    st.markdown("1. **Trained model file**: Save your model to use later")
+    st.markdown("2. **Performance report**: Accuracy, precision, recall metrics")
+    st.markdown("3. **Feature importance**: Which customer attributes matter most")
+    st.markdown("4. **Predictions**: List of customers likely to churn")
+    st.markdown("5. **Documentation**: What you learned and how to use the model")
 
 # Footer with key insights
 st.markdown("---")
