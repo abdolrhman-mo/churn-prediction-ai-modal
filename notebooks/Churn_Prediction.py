@@ -701,24 +701,322 @@ print("Model training completed!")
 
 # ## **Phase 8: Model Evaluation**
 
-# In[235]:
+# In[ ]:
 
 
 # Make predictions
 y_pred_lr = lr_model.predict(X_test_scaled)
 
+# SVM predictions
 y_pred_svm = svm_model.predict(X_test_scaled)
 
+# XGBoost predictions
 y_pred_xgb_encoded = xgb_model.predict(X_test_cleaned)
 y_pred_xgb = label_encoder.inverse_transform(y_pred_xgb_encoded)  # Convert back to 'Yes'/'No'
 
+# Random Forest predictions
 y_pred_rf = rf_model.predict(X_test_cleaned)
 
-# Make voting predictions
+# Voting predictions
 y_pred_voting = voting_model.predict(X_test_scaled)
 
 
-# In[236]:
+# In[246]:
+
+
+# Thresholding
+# STEP 1: Get probabilities from your model
+probabilities = svm_model.predict_proba(X_test_cleaned)[:, 1]
+# This gives you array like [0.25, 0.65, 0.45, 0.85, ...]
+
+print("Sample probabilities (first 5 customers):")
+for i in range(5):
+    print(f"Customer {i+1}: {probabilities[i]:.3f} probability of churning")
+
+print("\nTesting different thresholds:")
+print("Threshold | Recall | What this means")
+print("-" * 50)
+
+for threshold in [0.3, 0.4, 0.5, 0.6, 0.7]:
+    # Apply threshold
+    predictions = (probabilities >= threshold).astype(int)
+    pred_labels = ['Yes' if pred == 1 else 'No' for pred in predictions]
+
+    # Calculate recall
+    recall = recall_score(y_test, pred_labels, pos_label='Yes')
+
+    # Explanation
+    if threshold == 0.3:
+        meaning = "Very aggressive - flag lots of customers"
+    elif threshold == 0.5:
+        meaning = "Default threshold"
+    elif threshold == 0.7:
+        meaning = "Very conservative - flag few customers"
+    else:
+        meaning = "Balanced approach"
+
+    print(f"{threshold:^9} | {recall:.4f} | {meaning}")
+
+print("\n💡 Pick the threshold that gives you the best recall!")
+print("Usually 0.3-0.4 works well for churn prediction")
+
+
+# In[247]:
+
+
+# Simple SVM threshold optimization
+print("\n" + "="*60)
+print("🎯 SVM THRESHOLD OPTIMIZATION - FINDING BEST RECALL")
+print("="*60)
+
+# Get SVM probabilities (using the same data format as your existing code)
+svm_probs = svm_model.predict_proba(X_test_scaled)[:, 1]
+
+# Test different thresholds and find best recall
+thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+best_recall = 0
+best_threshold = 0.5
+best_metrics = {}
+
+print("Threshold | Recall  | Precision | F1-Score")
+print("-" * 45)
+
+for threshold in thresholds:
+    # Apply threshold
+    predictions = (svm_probs >= threshold).astype(int)
+    pred_labels = ['Yes' if pred == 1 else 'No' for pred in predictions]
+
+    # Calculate metrics
+    recall = recall_score(y_test, pred_labels, pos_label='Yes')
+    precision = precision_score(y_test, pred_labels, pos_label='Yes')
+    f1 = f1_score(y_test, pred_labels, pos_label='Yes')
+
+    print(f"{threshold:^9} | {recall:.4f}  | {precision:.4f}    | {f1:.4f}")
+
+    # Track best recall
+    if recall > best_recall:
+        best_recall = recall
+        best_threshold = threshold
+        best_metrics = {'recall': recall, 'precision': precision, 'f1': f1}
+
+print(f"\n🏆 BEST SVM THRESHOLD: {best_threshold}")
+print(f"   Recall: {best_metrics['recall']:.4f}")
+print(f"   Precision: {best_metrics['precision']:.4f}")
+print(f"   F1-Score: {best_metrics['f1']:.4f}")
+
+# Apply best threshold to get final SVM predictions
+final_svm_predictions = (svm_probs >= best_threshold).astype(int)
+final_svm_labels = ['Yes' if pred == 1 else 'No' for pred in final_svm_predictions]
+
+# Show final performance
+final_accuracy = accuracy_score(y_test, final_svm_labels)
+print(f"\n📊 FINAL SVM PERFORMANCE with threshold {best_threshold}:")
+print(f"   Accuracy:  {final_accuracy:.4f}")
+print(f"   Precision: {best_metrics['precision']:.4f}")
+print(f"   Recall:    {best_metrics['recall']:.4f}")
+print(f"   F1-Score:  {best_metrics['f1']:.4f}")
+
+# Show high-risk customers
+high_risk_count = (svm_probs >= best_threshold).sum()
+print(f"\n🔴 HIGH-RISK CUSTOMERS (Probability >= {best_threshold}): {high_risk_count}")
+
+print("✅ SVM threshold optimization completed!")
+print(f"💡 Use threshold {best_threshold} for production deployment")
+
+# Enhanced thresholding analysis for all models
+print("\n" + "="*80)
+print("🎯 THRESHOLD OPTIMIZATION - FINDING BEST RECALL FOR EACH MODEL")
+print("="*80)
+
+# Function to find best threshold for any model
+def find_best_threshold(model, X_test_data, y_test, model_name, use_encoded=False):
+    """Find the threshold that gives the best recall for a given model"""
+
+    # Get probabilities
+    if use_encoded:
+        # For models that need encoded data
+        y_test_encoded = label_encoder.transform(y_test)
+        probabilities = model.predict_proba(X_test_data)[:, 1]
+    else:
+        # For models that use scaled data
+        probabilities = model.predict_proba(X_test_data)[:, 1]
+
+    print(f"\n🔍 {model_name.upper()} - Threshold Analysis")
+    print("-" * 60)
+
+    # Test a wider range of thresholds
+    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    results = []
+
+    print("Threshold | Recall  | Precision | F1-Score | Meaning")
+    print("-" * 65)
+
+    for threshold in thresholds:
+        # Apply threshold
+        predictions = (probabilities >= threshold).astype(int)
+        pred_labels = ['Yes' if pred == 1 else 'No' for pred in predictions]
+
+        # Calculate metrics
+        recall = recall_score(y_test, pred_labels, pos_label='Yes')
+        precision = precision_score(y_test, pred_labels, pos_label='Yes')
+        f1 = f1_score(y_test, pred_labels, pos_label='Yes')
+
+        # Explanation
+        if threshold <= 0.2:
+            meaning = "Extremely aggressive"
+        elif threshold <= 0.4:
+            meaning = "Very aggressive"
+        elif threshold == 0.5:
+            meaning = "Default (balanced)"
+        elif threshold <= 0.7:
+            meaning = "Conservative"
+        else:
+            meaning = "Very conservative"
+
+        print(f"{threshold:^9} | {recall:.4f}  | {precision:.4f}    | {f1:.4f}   | {meaning}")
+        results.append((threshold, recall, precision, f1))
+
+    # Find best threshold based on recall
+    best_recall_idx = max(range(len(results)), key=lambda i: results[i][1])
+    best_threshold, best_recall, best_precision, best_f1 = results[best_recall_idx]
+
+    print(f"\n🏆 BEST RECALL for {model_name}:")
+    print(f"   Threshold: {best_threshold}")
+    print(f"   Recall: {best_recall:.4f}")
+    print(f"   Precision: {best_precision:.4f}")
+    print(f"   F1-Score: {best_f1:.4f}")
+
+    return best_threshold, best_recall, best_precision, best_f1
+
+# Analyze all models
+print("\n" + "="*80)
+print("📊 COMPREHENSIVE THRESHOLD ANALYSIS")
+print("="*80)
+
+# Test each model
+svm_best = find_best_threshold(svm_model, X_test_scaled, y_test, "SVM", False)
+lr_best = find_best_threshold(lr_model, X_test_scaled, y_test, "Logistic Regression", False)
+xgb_best = find_best_threshold(xgb_model, X_test_cleaned, y_test, "XGBoost", True)
+rf_best = find_best_threshold(rf_model, X_test_cleaned, y_test, "Random Forest", True)
+voting_best = find_best_threshold(voting_model, X_test_scaled, y_test, "Voting Classifier", False)
+
+# Summary of best thresholds
+print("\n" + "="*80)
+print("🏆 BEST THRESHOLDS SUMMARY - ALL MODELS")
+print("="*80)
+
+best_results = [
+    ("SVM", svm_best),
+    ("Logistic Regression", lr_best),
+    ("XGBoost", xgb_best),
+    ("Random Forest", rf_best),
+    ("Voting Classifier", voting_best)
+]
+
+print("Model              | Best Threshold | Best Recall | Best Precision | Best F1")
+print("-" * 80)
+
+for model_name, (threshold, recall, precision, f1) in best_results:
+    print(f"{model_name:<18} | {threshold:^14} | {recall:^11.4f} | {precision:^14.4f} | {f1:^7.4f}")
+
+# Find overall best model for recall
+overall_best_idx = max(range(len(best_results)), key=lambda i: best_results[i][1][1])
+overall_best_model, overall_best_metrics = best_results[overall_best_idx]
+best_threshold, best_recall, best_precision, best_f1 = overall_best_metrics
+
+print(f"\n🥇 OVERALL BEST MODEL FOR RECALL:")
+print(f"   {overall_best_model} with threshold {best_threshold}")
+print(f"   Recall: {best_recall:.4f}")
+print(f"   Precision: {best_precision:.4f}")
+print(f"   F1-Score: {best_f1:.4f}")
+
+# Business recommendations based on threshold analysis
+print("\n" + "="*80)
+print("💡 BUSINESS RECOMMENDATIONS - THRESHOLD STRATEGY")
+print("="*80)
+
+print("Threshold Strategy Options:")
+print("1. 🚨 HIGH RECALL (0.1-0.3): Flag many customers, catch most churners")
+print("   - Use when: Cost of missing churners is very high")
+print("   - Trade-off: Higher false positives, more retention effort needed")
+print("")
+print("2. ⚖️ BALANCED (0.4-0.6): Good balance of recall and precision")
+print("   - Use when: Balanced approach needed, moderate retention budget")
+print("   - Trade-off: Moderate false positives, reasonable effort")
+print("")
+print("3. 🎯 HIGH PRECISION (0.7-0.9): Flag few customers, high confidence")
+print("   - Use when: Retention resources are limited, focus on high-value customers")
+print("   - Trade-off: Lower recall, might miss some churners")
+
+print(f"\n🎯 RECOMMENDED STRATEGY for {overall_best_model}:")
+if best_threshold <= 0.3:
+    print("   Use threshold {best_threshold:.1f} for MAXIMUM RECALL")
+    print("   This will catch {best_recall:.1%} of churning customers")
+    print("   Strategy: Aggressive retention - contact many customers")
+elif best_threshold <= 0.6:
+    print("   Use threshold {best_threshold:.1f} for BALANCED PERFORMANCE")
+    print("   This will catch {best_recall:.1%} of churning customers")
+    print("   Strategy: Moderate retention - targeted approach")
+else:
+    print("   Use threshold {best_threshold:.1f} for HIGH PRECISION")
+    print("   This will catch {best_recall:.1%} of churning customers")
+    print("   Strategy: Conservative retention - focus on high-confidence cases")
+
+# Apply best threshold to get final predictions
+print("\n" + "="*80)
+print("🚀 FINAL PREDICTIONS WITH OPTIMIZED THRESHOLD")
+print("="*80)
+
+# Get probabilities from best model
+if overall_best_model == "SVM":
+    best_probs = svm_model.predict_proba(X_test_scaled)[:, 1]
+elif overall_best_model == "Logistic Regression":
+    best_probs = lr_model.predict_proba(X_test_scaled)[:, 1]
+elif overall_best_model == "XGBoost":
+    best_probs = xgb_model.predict_proba(X_test_cleaned)[:, 1]
+elif overall_best_model == "Random Forest":
+    best_probs = rf_model.predict_proba(X_test_cleaned)[:, 1]
+else:  # Voting Classifier
+    best_probs = voting_model.predict_proba(X_test_scaled)[:, 1]
+
+# Apply best threshold
+final_predictions = (best_probs >= best_threshold).astype(int)
+final_labels = ['Yes' if pred == 1 else 'No' for pred in final_predictions]
+
+# Calculate final metrics
+final_recall = recall_score(y_test, final_labels, pos_label='Yes')
+final_precision = precision_score(y_test, final_labels, pos_label='Yes')
+final_f1 = f1_score(y_test, final_labels, pos_label='Yes')
+final_accuracy = accuracy_score(y_test, final_labels)
+
+print(f"Final Performance with {best_threshold:.1f} threshold:")
+print(f"   Accuracy:  {final_accuracy:.4f}")
+print(f"   Precision: {final_precision:.4f}")
+print(f"   Recall:    {final_recall:.4f}")
+print(f"   F1-Score:  {final_f1:.4f}")
+
+# Show sample of high-risk customers
+print(f"\n🔴 HIGH-RISK CUSTOMERS (Probability >= {best_threshold:.1f}):")
+high_risk_indices = np.where(best_probs >= best_threshold)[0]
+print(f"Total high-risk customers: {len(high_risk_indices)}")
+
+if len(high_risk_indices) > 0:
+    print("\nSample high-risk customers:")
+    for i, idx in enumerate(high_risk_indices[:5]):  # Show first 5
+        customer = X_test.iloc[idx]
+        prob = best_probs[idx]
+        actual = y_test.iloc[idx]
+        print(f"   Customer {i+1}: {prob:.3f} churn probability")
+        print(f"     Contract: {customer.get('Contract', 'N/A')}")
+        print(f"     Monthly Charges: ${customer.get('MonthlyCharges', 'N/A'):.2f}")
+        print(f"     Actual Churn: {actual}")
+        print("")
+
+print("✅ Threshold optimization completed!")
+print("💡 Use the recommended threshold for production deployment")
+
+
+# In[241]:
 
 
 # Evaluation function for cleaner code
