@@ -3,7 +3,7 @@
 
 # ## **Phase 1: Data Loading & Initial Exploration**
 
-# In[1]:
+# In[39]:
 
 
 import pandas as pd
@@ -26,6 +26,9 @@ from sklearn.impute import SimpleImputer
 from imblearn.over_sampling import SMOTE, RandomOverSampler, ADASYN
 from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTEENN, SMOTETomek
+
+import joblib
+import os
 
 
 # In[2]:
@@ -870,4 +873,134 @@ print(f"\n🔴 HIGH-RISK CUSTOMERS (Probability >= {best_threshold}): {high_risk
 
 print("✅ SVM threshold optimization completed!")
 print(f"💡 Use threshold {best_threshold} for production deployment")
+
+
+# ## **Saving the model**
+
+# In[ ]:
+
+
+# Save the optimized SVM model with best threshold
+print("\n" + "="*60)
+print("💾 SAVING OPTIMIZED SVM MODEL")
+print("="*60)
+
+# Create models directory if it doesn't exist
+os.makedirs("models", exist_ok=True)
+
+# Save the SVM model
+svm_model_path = "../models/svm_model.pkl"
+joblib.dump(svm_model, svm_model_path)
+print(f"✅ SVM model saved to: {svm_model_path}")
+
+# Save the best threshold value
+threshold_path = "models/svm_threshold.txt"
+with open(threshold_path, 'w') as f:
+    f.write(str(best_threshold))
+print(f"✅ Best threshold saved to: {threshold_path}")
+
+# Save the scaler for preprocessing new data
+scaler_path = "models/scaler.pkl"
+joblib.dump(scaler, scaler_path)
+print(f"✅ Scaler saved to: {scaler_path}")
+
+# Save the preprocessing pipeline
+processing_path = "models/preprocessing.pkl"
+joblib.dump(processing, processing_path)
+print(f"✅ Preprocessing pipeline saved to: {processing_path}")
+
+print(f"\n🎯 Model deployment ready!")
+print(f"   - Use threshold: {best_threshold}")
+print(f"   - Model file: {svm_model_path}")
+print(f"   - For new predictions: load model and apply threshold {best_threshold}")
+
+# Function to load and use the saved model
+def load_and_predict_svm(customer_data):
+    """
+    Load the saved SVM model and make predictions on new customer data
+
+    Parameters:
+    customer_data: DataFrame with customer features (same columns as training data)
+
+    Returns:
+    predictions: Churn predictions (Yes/No)
+    probabilities: Churn probabilities
+    risk_scores: Risk scores based on threshold
+    """
+    try:
+        # Load the saved components
+        svm_model = joblib.load("models/svm_model.pkl")
+        scaler = joblib.load("models/scaler.pkl")
+        processing = joblib.load("models/preprocessing.pkl")
+
+        # Load the best threshold
+        with open("models/svm_threshold.txt", 'r') as f:
+            best_threshold = float(f.read().strip())
+
+        print(f"✅ Model loaded successfully with threshold: {best_threshold}")
+
+        # Preprocess the new data
+        customer_processed = processing.transform(customer_data)
+        customer_scaled = scaler.transform(customer_processed)
+
+        # Get probabilities
+        probabilities = svm_model.predict_proba(customer_scaled)[:, 1]
+
+        # Apply the optimized threshold
+        predictions = ['Yes' if prob >= best_threshold else 'No' for prob in probabilities]
+
+        # Create risk scores
+        risk_scores = []
+        for prob in probabilities:
+            if prob >= best_threshold:
+                if prob >= 0.8:
+                    risk_scores.append('Very High Risk')
+                elif prob >= 0.6:
+                    risk_scores.append('High Risk')
+                else:
+                    risk_scores.append('Medium Risk')
+            else:
+                if prob <= 0.2:
+                    risk_scores.append('Very Low Risk')
+                else:
+                    risk_scores.append('Low Risk')
+
+        return predictions, probabilities, risk_scores
+
+    except Exception as e:
+        print(f"❌ Error loading model: {e}")
+        return None, None, None
+
+# Example usage (uncomment to test)
+# print("\n" + "="*60)
+# print("🧪 TESTING MODEL LOADING")
+# print("="*60)
+# 
+# # Create sample customer data (replace with your actual data)
+# sample_customer = pd.DataFrame({
+#     'gender': ['Male'],
+#     'SeniorCitizen': [0],
+#     'Partner': ['Yes'],
+#     'Dependents': ['No'],
+#     'tenure': [12],
+#     'PhoneService': ['Yes'],
+#     'InternetService': ['DSL'],
+#     'OnlineSecurity': ['No'],
+#     'OnlineBackup': ['No'],
+#     'DeviceProtection': ['No'],
+#     'TechSupport': ['No'],
+#     'StreamingTV': ['No'],
+#     'StreamingMovies': ['No'],
+#     'Contract': ['Month-to-month'],
+#     'MonthlyCharges': [65.0],
+#     'TotalCharges': [780.0]
+# })
+# 
+# # Make prediction
+# predictions, probabilities, risk_scores = load_and_predict_svm(sample_customer)
+# 
+# if predictions is not None:
+#     print(f"Sample customer prediction: {predictions[0]}")
+#     print(f"Churn probability: {probabilities[0]:.3f}")
+#     print(f"Risk level: {risk_scores[0]}")
 
